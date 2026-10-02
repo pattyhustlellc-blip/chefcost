@@ -2888,13 +2888,13 @@ function MobileBottomNav({ page, setPage, lang, pendingShopping }) {
 export default function App() {
   const isMobile = useIsMobile();
   const [currentUser, setUserState] = useState(()=>{
-    try { const s=localStorage.getItem("chefcost_user"); return s?JSON.parse(s):null; } catch(e){ return null; }
+    try { const s=sessionStorage.getItem("chefcost_user"); return s?JSON.parse(s):null; } catch(e){ return null; }
   });
   function setUser(u) {
     setUserState(u);
     try {
-      if (u) localStorage.setItem("chefcost_user", JSON.stringify(u));
-      else localStorage.removeItem("chefcost_user");
+      if (u) sessionStorage.setItem("chefcost_user", JSON.stringify(u));
+      else sessionStorage.removeItem("chefcost_user");
     } catch(e) {}
   }
   const [users,       setUsers]       = useState([]);
