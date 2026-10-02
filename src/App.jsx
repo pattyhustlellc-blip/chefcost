@@ -1,5 +1,5 @@
 // @version 2.2 - Phase 1 redesign: Windows 11 light theme
-/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars, react-hooks/exhaustive-deps */
 import React, { useState, useRef, useEffect, createContext, useContext } from "react";
 // @ts-ignore
 import { createClient } from "@supabase/supabase-js";
@@ -2408,6 +2408,7 @@ function ShoppingList() {
       setLoading(false);
     }
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
   async function addItem() {
