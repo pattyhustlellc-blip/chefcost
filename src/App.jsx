@@ -361,6 +361,375 @@ const NAV = [
 ];
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
+// ─── REGISTER ────────────────────────────────────────────────────────────────
+function Register({ onBack }) {
+  const [step, setStep]     = useState(1); // 1=restaurant name, 2=admin account, 3=done
+  const [restName, setRN]   = useState("");
+  const [name, setName]     = useState("");
+  const [email, setEmail]   = useState("");
+  const [pwd, setPwd]       = useState("");
+  const [pwd2, setPwd2]     = useState("");
+  const [show, setShow]     = useState(false);
+  const [err, setErr]       = useState("");
+  const [load, setLoad]     = useState(false);
+
+  async function createAccount() {
+    setErr("");
+    if (!name.trim()) { setErr("Enter your name."); return; }
+    if (!email.trim()) { setErr("Enter your email."); return; }
+    if (pwd.length < 6) { setErr("Password must be at least 6 characters."); return; }
+    if (pwd !== pwd2) { setErr("Passwords don't match."); return; }
+    setLoad(true);
+    try {
+      // 1. Check email not already in use
+      const { data: existing } = await supabase.from("app_users").select("id").eq("email", email).maybeSingle();
+      if (existing) { setErr("An account with this email already exists."); setLoad(false); return; }
+
+      // 2. Create restaurant
+      const slug = restName.trim().toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
+      const { data: rest, error: restErr } = await supabase.from("restaurants").insert({ name: restName.trim(), slug, plan:"trial" }).select().single();
+      if (restErr) { setErr("Error creating restaurant: "+restErr.message); setLoad(false); return; }
+
+      // 3. Create admin user
+      const { error: userErr } = await supabase.from("app_users").insert({
+        name: name.trim(), email: email.trim().toLowerCase(), password: pwd,
+        role: "admin", restaurant_id: rest.id,
+        permissions: { dashboard:"edit", ingredients:"edit", recipes:"edit", invoices:"edit", inventory:"edit", wastelog:"edit", shopping:"edit" },
+      });
+      if (userErr) { setErr("Error creating user: "+userErr.message); setLoad(false); return; }
+
+      // 4. Create default app_settings row for this restaurant
+      await supabase.from("app_settings").insert({
+        restaurant_id: rest.id, lang:"en", main_supplier:"", order_days:[], shopping_submitted:false,
+      });
+
+      setStep(3);
+    } catch(e) { setErr(e.message||String(e)); }
+    setLoad(false);
+  }
+
+  const logo = (
+    <div style={{ textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
+      <img src="/knives-logo.png" alt="ChefCost" style={{ width:100, height:100, objectFit:"contain", display:"block" }}/>
+      <div style={{ fontSize:20, fontWeight:800, letterSpacing:1, color:TEXT }}>CHEFCOST</div>
+      <div style={{ fontSize:10, fontWeight:600, letterSpacing:3, color:TEXT2, textTransform:"uppercase", marginTop:-6 }}>Food Cost Manager</div>
+    </div>
+  );
+
+  // Step indicators
+  const steps = ["Restaurant","Account","Done"];
+  const stepBar = (
+    <div style={{ display:"flex", alignItems:"center", gap:0, marginBottom:4 }}>
+      {steps.map((s,i) => (
+        <React.Fragment key={i}>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+            <div style={{ width:26, height:26, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700,
+              background: step>i+1 ? ACCENT : step===i+1 ? ACCENT : BDR,
+              color: step>=i+1 ? "#fff" : TEXT2 }}>
+              {step>i+1 ? <i className="ti ti-check" style={{fontSize:12}}/> : i+1}
+            </div>
+            <div style={{ fontSize:9, color: step===i+1?ACCENT:TEXT2, fontWeight:step===i+1?600:400 }}>{s}</div>
+          </div>
+          {i<steps.length-1 && <div style={{ flex:1, height:2, background:step>i+1?ACCENT:BDR, margin:"0 6px", marginBottom:16 }}/>}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+
+  if (step===3) return (
+    <div style={{ minHeight:"100vh", background:BG, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ width:"100%", maxWidth:400, display:"flex", flexDirection:"column", gap:20 }}>
+        {logo}
+        <div style={{ ...g.card, padding:28, display:"flex", flexDirection:"column", alignItems:"center", gap:16, textAlign:"center" }}>
+          <div style={{ width:56, height:56, borderRadius:"50%", background:"rgba(15,123,15,0.12)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <i className="ti ti-circle-check" style={{ fontSize:30, color:FC_OK }}/>
+          </div>
+          <div style={{ fontSize:17, fontWeight:700 }}>Account created!</div>
+          <div style={{ fontSize:13, color:TEXT2, lineHeight:1.5 }}>
+            <strong>{restName}</strong> is ready.<br/>Sign in with your email and password to get started.
+          </div>
+          <button style={{ ...g.btnP, width:"100%", justifyContent:"center" }} onClick={onBack}>
+            <i className="ti ti-login"/>Sign in
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight:"100vh", background:BG, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ width:"100%", maxWidth:400, display:"flex", flexDirection:"column", gap:20 }}>
+        {logo}
+        <div style={{ ...g.card, padding:24, display:"flex", flexDirection:"column", gap:16 }}>
+          <div>
+            <div style={{ fontSize:15, fontWeight:700, marginBottom:2 }}>Create your account</div>
+            <div style={{ fontSize:12, color:TEXT2 }}>Free trial — no credit card required</div>
+          </div>
+
+          {stepBar}
+
+          {err && (
+            <div style={{ background:"rgba(226,75,74,0.1)", border:"1px solid rgba(226,75,74,0.25)", borderRadius:8, padding:"9px 13px", fontSize:12, color:"#E24B4A" }}>
+              <i className="ti ti-alert-circle" style={{ marginRight:6 }}/>{err}
+            </div>
+          )}
+
+          {step===1 && (
+            <>
+              <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                <label style={g.lbl}>Restaurant name</label>
+                <input style={g.inp} placeholder="e.g. Patty Hustle" value={restName}
+                  onChange={e=>{setRN(e.target.value);setErr("");}}
+                  onKeyDown={e=>e.key==="Enter"&&restName.trim()&&setStep(2)}
+                  autoFocus/>
+                <div style={{ fontSize:11, color:TEXT2 }}>This is what your team will see in the app.</div>
+              </div>
+              <button style={{ ...g.btnP, width:"100%", justifyContent:"center", opacity:restName.trim()?1:0.5 }}
+                onClick={()=>{ if(!restName.trim()){setErr("Enter your restaurant name.");return;} setStep(2); }}
+                disabled={!restName.trim()}>
+                Continue <i className="ti ti-arrow-right"/>
+              </button>
+            </>
+          )}
+
+          {step===2 && (
+            <>
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  <label style={g.lbl}>Your name</label>
+                  <input style={g.inp} placeholder="Maria Garcia" value={name} onChange={e=>{setName(e.target.value);setErr("");}} autoFocus/>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  <label style={g.lbl}>Email</label>
+                  <input style={g.inp} type="email" placeholder="you@restaurant.com" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}}/>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  <label style={g.lbl}>Password</label>
+                  <div style={{ position:"relative" }}>
+                    <input style={{ ...g.inp, paddingRight:40 }} type={show?"text":"password"} placeholder="Min 6 characters" value={pwd}
+                      onChange={e=>{setPwd(e.target.value);setErr("");}}/>
+                    <button style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:TEXT2, cursor:"pointer" }}
+                      onClick={()=>setShow(v=>!v)}><i className={`ti ${show?"ti-eye-off":"ti-eye"}`}/></button>
+                  </div>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  <label style={g.lbl}>Confirm password</label>
+                  <input style={g.inp} type={show?"text":"password"} placeholder="Repeat password" value={pwd2}
+                    onChange={e=>{setPwd2(e.target.value);setErr("");}}
+                    onKeyDown={e=>e.key==="Enter"&&createAccount()}/>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button style={{ ...g.btnS, flex:0 }} onClick={()=>setStep(1)}>
+                  <i className="ti ti-arrow-left"/>
+                </button>
+                <button style={{ ...g.btnP, flex:1, justifyContent:"center", opacity:load?0.7:1 }} onClick={createAccount} disabled={load}>
+                  {load
+                    ? <><i className="ti ti-loader-2" style={{ animation:"spin 0.8s linear infinite" }}/>Creating...</>
+                    : <><i className="ti ti-check"/>Create account</>
+                  }
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{ textAlign:"center" }}>
+          <button style={{ background:"none", border:"none", color:TEXT2, fontSize:12, cursor:"pointer", textDecoration:"underline" }} onClick={onBack}>
+            ← Back to sign in
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ONBOARDING WIZARD ───────────────────────────────────────────────────────
+function Onboarding({ onDone }) {
+  const { lang, setPage, currentUser, ingredients, setIngredients } = useApp();
+  const [step, setStep] = useState(1); // 1=welcome, 2=ingredient, 3=recipe, 4=done
+  const [ing, setIng]   = useState({ name:"", category:"", supplier:"", unit_purchase:"lb", unit_use:"lb", price:"", pack_size:"1" });
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr]   = useState("");
+
+  const isEs = lang === "es";
+
+  async function saveIngredient() {
+    if (!ing.name.trim()) { setErr(isEs ? "Necesitas un nombre." : "Name is required."); return; }
+    if (!ing.price || isNaN(parseFloat(ing.price))) { setErr(isEs ? "Ingresa el precio." : "Enter a price."); return; }
+    setSaving(true);
+    setErr("");
+    const rid = currentUser?.restaurant_id;
+    const row = {
+      name: ing.name.trim(),
+      category: ing.category || (isEs ? "General" : "General"),
+      supplier: ing.supplier || "",
+      unit_purchase: ing.unit_purchase,
+      unit_use: ing.unit_use,
+      unit_inventory: ing.unit_use,
+      price: parseFloat(ing.price),
+      prev_price: parseFloat(ing.price),
+      pack_size: parseFloat(ing.pack_size) || 1,
+      stock: 0,
+      min_stock: 5,
+      restaurant_id: rid,
+    };
+    const { data, error } = await supabase.from("ingredients").insert(row).select().single();
+    setSaving(false);
+    if (error) { setErr(error.message); return; }
+    setIngredients(prev => [...prev, data]);
+    setSaved(true);
+    setTimeout(() => setStep(3), 900);
+  }
+
+  // Overlay container
+  const overlay = {
+    position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:2000,
+    display:"flex", alignItems:"center", justifyContent:"center", padding:20,
+  };
+  const card = {
+    background:SURF, borderRadius:16, padding:"32px 28px", width:"100%", maxWidth:460,
+    boxShadow:"0 20px 60px rgba(0,0,0,0.25)", position:"relative",
+  };
+  const stepDot = (n) => ({
+    width:8, height:8, borderRadius:"50%",
+    background: step >= n ? ACCENT : BDR,
+    transition:"background 0.3s",
+  });
+
+  return (
+    <div style={overlay}>
+      <div style={card}>
+        {/* Progress dots */}
+        <div style={{ display:"flex", gap:6, justifyContent:"center", marginBottom:28 }}>
+          {[1,2,3,4].map(n => <div key={n} style={stepDot(n)}/>)}
+        </div>
+
+        {/* STEP 1 — Welcome */}
+        {step === 1 && (
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>👨‍🍳</div>
+            <div style={{ fontSize:20, fontWeight:700, color:TEXT, marginBottom:8 }}>
+              {isEs ? "¡Bienvenido a ChefCost!" : "Welcome to ChefCost!"}
+            </div>
+            <div style={{ fontSize:13, color:TEXT2, lineHeight:1.6, marginBottom:24 }}>
+              {isEs
+                ? "Vamos a configurar tu restaurante en 3 pasos rápidos. Solo toma 2 minutos."
+                : "Let's set up your restaurant in 3 quick steps. It only takes 2 minutes."}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:20 }}>
+              {[
+                { icon:"ti-carrot", text: isEs ? "Agregar tu primer ingrediente" : "Add your first ingredient" },
+                { icon:"ti-book-2", text: isEs ? "Crear tu primera receta" : "Create your first recipe" },
+                { icon:"ti-chart-bar", text: isEs ? "Ver tu tablero de costos" : "See your cost dashboard" },
+              ].map((item,i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:BG, borderRadius:8, padding:"10px 14px" }}>
+                  <div style={{ width:32, height:32, background:`${ACCENT}15`, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <i className={`ti ${item.icon}`} style={{ fontSize:16, color:ACCENT }}/>
+                  </div>
+                  <span style={{ fontSize:13, color:TEXT, fontWeight:500 }}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+            <button style={{ ...g.btnP, width:"100%", justifyContent:"center", fontSize:14, padding:"11px 0" }} onClick={()=>setStep(2)}>
+              {isEs ? "Empezar →" : "Get started →"}
+            </button>
+            <button style={{ background:"none", border:"none", color:TEXT2, fontSize:12, cursor:"pointer", marginTop:10, textDecoration:"underline" }} onClick={onDone}>
+              {isEs ? "Saltar por ahora" : "Skip for now"}
+            </button>
+          </div>
+        )}
+
+        {/* STEP 2 — Add first ingredient */}
+        {step === 2 && (
+          <div>
+            <div style={{ fontSize:18, fontWeight:700, color:TEXT, marginBottom:4 }}>
+              {isEs ? "Agrega tu primer ingrediente" : "Add your first ingredient"}
+            </div>
+            <div style={{ fontSize:12, color:TEXT2, marginBottom:18 }}>
+              {isEs ? "Por ejemplo: Pollo, Cebolla, Aceite..." : "For example: Chicken, Onion, Oil..."}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div>
+                <label style={g.lbl}>{isEs ? "Nombre del ingrediente *" : "Ingredient name *"}</label>
+                <input style={g.inp} placeholder={isEs ? "ej. Pechuga de pollo" : "e.g. Chicken breast"} value={ing.name} onChange={e=>setIng(p=>({...p,name:e.target.value}))} autoFocus/>
+              </div>
+              <div style={{ display:"flex", gap:10 }}>
+                <div style={{ flex:1 }}>
+                  <label style={g.lbl}>{isEs ? "Precio ($) *" : "Price ($) *"}</label>
+                  <input style={g.inp} type="text" inputMode="decimal" placeholder="0.00" value={ing.price} onChange={e=>setIng(p=>({...p,price:e.target.value}))}/>
+                </div>
+                <div style={{ flex:1 }}>
+                  <label style={g.lbl}>{isEs ? "Unidad de compra" : "Purchase unit"}</label>
+                  <select style={g.sel} value={ing.unit_purchase} onChange={e=>setIng(p=>({...p,unit_purchase:e.target.value,unit_use:e.target.value}))}>
+                    {getUnits(lang).map(u=><option key={u}>{u}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style={g.lbl}>{isEs ? "Proveedor (opcional)" : "Supplier (optional)"}</label>
+                <input style={g.inp} placeholder={isEs ? "ej. Restaurant Depot" : "e.g. Restaurant Depot"} value={ing.supplier} onChange={e=>setIng(p=>({...p,supplier:e.target.value}))}/>
+              </div>
+            </div>
+            {err && <div style={{ fontSize:12, color:FC_ERR, marginTop:8 }}>{err}</div>}
+            {saved && <div style={{ fontSize:12, color:FC_OK, marginTop:8 }}>✓ {isEs ? "¡Guardado!" : "Saved!"}</div>}
+            <div style={{ display:"flex", gap:8, marginTop:18 }}>
+              <button style={{ ...g.btnS, flex:"none" }} onClick={()=>setStep(1)}>←</button>
+              <button style={{ ...g.btnP, flex:1, justifyContent:"center" }} onClick={saveIngredient} disabled={saving}>
+                {saving ? (isEs ? "Guardando..." : "Saving...") : (isEs ? "Guardar y continuar →" : "Save & continue →")}
+              </button>
+            </div>
+            <button style={{ background:"none", border:"none", color:TEXT2, fontSize:12, cursor:"pointer", marginTop:10, textDecoration:"underline", display:"block", width:"100%", textAlign:"center" }} onClick={()=>setStep(3)}>
+              {isEs ? "Saltar este paso" : "Skip this step"}
+            </button>
+          </div>
+        )}
+
+        {/* STEP 3 — Go create a recipe */}
+        {step === 3 && (
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>📖</div>
+            <div style={{ fontSize:18, fontWeight:700, color:TEXT, marginBottom:8 }}>
+              {isEs ? "¡Perfecto! Ahora una receta" : "Great! Now create a recipe"}
+            </div>
+            <div style={{ fontSize:13, color:TEXT2, lineHeight:1.6, marginBottom:24 }}>
+              {isEs
+                ? "Las recetas calculan tu costo por porción automáticamente. Empieza con tu plato estrella."
+                : "Recipes auto-calculate your cost per portion. Start with your signature dish."}
+            </div>
+            <button style={{ ...g.btnP, width:"100%", justifyContent:"center", fontSize:14, padding:"11px 0", marginBottom:10 }} onClick={()=>{ onDone(); setPage("recipes"); }}>
+              <i className="ti ti-book-2" style={{ fontSize:16 }}/>{isEs ? "Ir a Recetas" : "Go to Recipes"}
+            </button>
+            <button style={{ ...g.btnS, width:"100%", justifyContent:"center", fontSize:13, padding:"10px 0" }} onClick={()=>setStep(4)}>
+              {isEs ? "Lo haré después" : "I'll do this later"}
+            </button>
+          </div>
+        )}
+
+        {/* STEP 4 — Done */}
+        {step === 4 && (
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>🎉</div>
+            <div style={{ fontSize:20, fontWeight:700, color:TEXT, marginBottom:8 }}>
+              {isEs ? "¡Todo listo!" : "You're all set!"}
+            </div>
+            <div style={{ fontSize:13, color:TEXT2, lineHeight:1.6, marginBottom:24 }}>
+              {isEs
+                ? "Tu restaurante está configurado. Puedes agregar más ingredientes y recetas en cualquier momento."
+                : "Your restaurant is configured. You can add more ingredients and recipes anytime."}
+            </div>
+            <button style={{ ...g.btnP, width:"100%", justifyContent:"center", fontSize:14, padding:"11px 0" }} onClick={onDone}>
+              <i className="ti ti-layout-dashboard" style={{ fontSize:16 }}/>{isEs ? "Ver mi tablero" : "View my dashboard"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
 function Login() {
   const { setUser, lang } = useApp();
   const [email, setEmail] = useState("");
@@ -368,6 +737,9 @@ function Login() {
   const [show,  setShow]  = useState(false);
   const [err,   setErr]   = useState("");
   const [load,  setLoad]  = useState(false);
+  const [showReg, setShowReg] = useState(false);
+
+  if (showReg) return <Register onBack={()=>setShowReg(false)}/>;
 
   async function login() {
     setLoad(true);
@@ -437,6 +809,13 @@ function Login() {
               ? <><i className="ti ti-loader-2" style={{ animation:"spin 0.8s linear infinite" }}/>{lang==="es"?"Verificando...":"Verifying..."}</>
               : <><i className="ti ti-login"/>{lang==="es"?"Ingresar":"Sign in"}</>
             }
+          </button>
+        </div>
+
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:12, color:TEXT2, marginBottom:6 }}>New restaurant?</div>
+          <button style={{ ...g.btnS, fontSize:12, width:"100%", justifyContent:"center" }} onClick={()=>setShowReg(true)}>
+            <i className="ti ti-building-store"/>Create a free account
           </button>
         </div>
       </div>
@@ -3109,6 +3488,9 @@ export default function App() {
   const [page,        setPage]        = useState("dashboard");
   const [dbLoading,   setDbLoading]   = useState(true);
   const [dbError,     setDbError]     = useState(null);
+  const [onboardingDone, setOnboardingDone] = useState(() => {
+    try { return !!localStorage.getItem("chefcost_ob_" + (JSON.parse(localStorage.getItem("chefcost_user")||"{}").restaurant_id || "")); } catch(e) { return false; }
+  });
 
   // Load all data from Supabase on first mount
   useEffect(() => {
@@ -3165,6 +3547,11 @@ export default function App() {
     }
     loadAll();
   }, []);
+
+  function completeOnboarding() {
+    try { localStorage.setItem("chefcost_ob_" + (currentUser?.restaurant_id||""), "1"); } catch(e) {}
+    setOnboardingDone(true);
+  }
 
   const canAccess = (id) => !currentUser ? false : currentUser.role==="admin" ? true : !!currentUser.permissions[id];
   const canEdit   = (id) => !currentUser ? false : currentUser.role==="admin" ? true : currentUser.permissions[id]==="edit";
@@ -3297,6 +3684,11 @@ export default function App() {
                 }
               </div>
             </div>
+
+            {/* Onboarding wizard — shown once for new restaurants with no ingredients */}
+            {!onboardingDone && ingredients.length === 0 && (
+              <Onboarding onDone={completeOnboarding}/>
+            )}
 
             {/* MOBILE Bottom Navigation */}
             {isMobile&&<MobileBottomNav page={page} setPage={setPage} lang={lang} pendingShopping={pendingShopping}/>}
