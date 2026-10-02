@@ -448,6 +448,7 @@ function Login() {
 function Dashboard() {
   const { ingredients, recipes, lang, pendingShopping, setPage, shoppingSubmitted, shoppingSubmittedBy } = useApp();
   const isMobile = useIsMobile();
+  const [showAlerts, setShowAlerts] = useState(false);
   const calcs    = recipes.map(r => ({ ...r, ...calcRecipe(r, ingredients, recipes) }));
   const menuDishes = calcs.filter(r => !r.is_subrecipe);
   const priceUp  = ingredients.filter(i => i.price > i.prev_price);
@@ -464,22 +465,48 @@ function Dashboard() {
   return (
     <div style={{ padding: isMobile?12:20, display:"flex", flexDirection:"column", gap:12 }}>
 
-      {/* ── Alerts banner ── */}
-      {priceUp.length > 0 && (
-        <div style={{ background:WARN_BG, border:`1px solid ${WARN_BDR}`, borderRadius:10, padding:"11px 16px", display:"flex", alignItems:"center", gap:10 }}>
-          <i className="ti ti-alert-triangle" style={{ fontSize:18, color:WARN_ICO, flexShrink:0 }}/>
-          <div style={{ flex:1, fontSize:13, color:"#7A5000", fontWeight:600 }}>
-            {lang==="en"
-              ? `${priceUp.length} ingredient${priceUp.length>1?"s":""} rose in price this week`
-              : `${priceUp.length} ingrediente${priceUp.length>1?"s":""} subieron de precio esta semana`}
-            {priceUp.length <= 3 && (
-              <span style={{ fontWeight:400, color:WARN_ICO }}>
-                {" — "}{priceUp.map(i=>i.name).join(", ")}
-              </span>
-            )}
+      {/* ── Price alerts modal ── */}
+      {showAlerts && (
+        <div style={g.modal} onClick={()=>setShowAlerts(false)}>
+          <div style={{ ...g.mbox, maxWidth:480 }} onClick={e=>e.stopPropagation()}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <i className="ti ti-trending-up" style={{ fontSize:18, color:FC_ERR }}/>
+                <span style={{ fontSize:15, fontWeight:700, color:TEXT }}>{lang==="en"?"Price Alerts":"Alertas de Precio"}</span>
+              </div>
+              <button onClick={()=>setShowAlerts(false)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:18, color:TEXT2, padding:4 }}>✕</button>
+            </div>
+            <div style={{ fontSize:12, color:TEXT2 }}>
+              {lang==="en"
+                ? `${priceUp.length} ingredient${priceUp.length>1?"s":""} have increased in price`
+                : `${priceUp.length} ingrediente${priceUp.length>1?"s":""} subieron de precio`}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+              {priceUp.map(ing => {
+                const d = priceDiff(ing.price, ing.prev_price);
+                return (
+                  <div key={ing.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:`1px solid ${BDR}` }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:TEXT }}>{ing.name}</div>
+                      <div style={{ fontSize:11, color:TEXT2, marginTop:2 }}>
+                        <span style={{ textDecoration:"line-through" }}>${ing.prev_price.toFixed(2)}</span>
+                        {" → "}
+                        <span style={{ fontWeight:700, color:ACCENT }}>${ing.price.toFixed(2)}</span>
+                        {ing.unit_use && <span style={{ color:TEXT2 }}> / {ing.unit_use}</span>}
+                      </div>
+                    </div>
+                    <span style={g.pp(d.up, d.same)}>{d.up ? "+" : "-"}{d.pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+            <button style={g.btnS} onClick={()=>setShowAlerts(false)}>
+              {lang==="en"?"Close":"Cerrar"}
+            </button>
           </div>
         </div>
       )}
+
       {shoppingSubmitted && (
         <div style={{ background:"rgba(15,123,15,0.06)", border:`1px solid rgba(15,123,15,0.25)`, borderRadius:10, padding:"11px 16px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={()=>setPage("shopping")}>
           <i className="ti ti-shopping-cart" style={{ fontSize:18, color:FC_OK, flexShrink:0 }}/>
@@ -507,9 +534,9 @@ function Dashboard() {
           { icon:"ti-basket",       label:lang==="en"?"Ingredients":"Ingredientes",  value:ingredients.length,            sub:lang==="en"?"registered":"registrados",   color:TEXT },
           { icon:"ti-book",         label:lang==="en"?"Menu dishes":"Platos",        value:menuDishes.length,             sub:lang==="en"?"in menu":"en menú",           color:TEXT },
           { icon:"ti-currency-dollar", label:lang==="en"?"Avg cost":"Costo prom.",  value:`$${avgCost.toFixed(2)}`,      sub:lang==="en"?"per portion":"por porción",    color:"#EF9F27" },
-          { icon:"ti-trending-up",  label:lang==="en"?"Price alerts":"Alertas",     value:priceUp.length,                sub:lang==="en"?"rose this week":"subieron",   color:priceUp.length>0?FC_ERR:FC_OK },
+          { icon:"ti-trending-up",  label:lang==="en"?"Price alerts":"Alertas",     value:priceUp.length,                sub:lang==="en"?"rose this week":"subieron",   color:priceUp.length>0?FC_ERR:FC_OK, onClick: priceUp.length>0?()=>setShowAlerts(true):null },
         ].map((s,i) => (
-          <div key={i} style={{ background:SURF, border:`1px solid ${BDR}`, borderRadius:10, padding:"12px 14px" }}>
+          <div key={i} onClick={s.onClick||undefined} style={{ background:SURF, border:`1px solid ${s.onClick?FC_ERR:BDR}`, borderRadius:10, padding:"12px 14px", cursor:s.onClick?"pointer":"default", transition:"box-shadow 0.15s" }} onMouseEnter={e=>{ if(s.onClick) e.currentTarget.style.boxShadow="0 2px 8px rgba(196,43,28,0.15)"; }} onMouseLeave={e=>{ e.currentTarget.style.boxShadow="none"; }}>
             <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
               <i className={`ti ${s.icon}`} style={{ fontSize:14, color:s.color }}/>
               <span style={{ fontSize:10, color:TEXT2, fontWeight:600, textTransform:"uppercase", letterSpacing:0.4 }}>{s.label}</span>
