@@ -394,8 +394,27 @@ function Login() {
     <div style={{ minHeight:"100vh", background:BG, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
       <div style={{ width:"100%", maxWidth:400, display:"flex", flexDirection:"column", gap:20 }}>
 
-        <div style={{ textAlign:"center" }}>
-          <img src={LOGO_URL} alt="ChefCost" style={{ width:160, height:160, objectFit:"contain", display:"block", margin:"0 auto" }}/>
+        <div style={{ textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+          <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Left knife */}
+            <g transform="rotate(-32, 40, 40)">
+              <rect x="38.5" y="8" width="3" height="42" rx="1.5" fill="#C8312B"/>
+              <path d="M38.5 8 Q40 4 41.5 8 L41.5 22 Q40 20 38.5 22 Z" fill="#A8261F"/>
+              <rect x="36" y="50" width="8" height="3" rx="1" fill="#8A8A8A"/>
+              <rect x="37.5" y="53" width="5" height="14" rx="2" fill="#5F5F5F"/>
+              <rect x="38" y="67" width="4" height="2" rx="1" fill="#3A3A3A"/>
+            </g>
+            {/* Right knife */}
+            <g transform="rotate(32, 40, 40)">
+              <rect x="38.5" y="8" width="3" height="42" rx="1.5" fill="#C8312B"/>
+              <path d="M38.5 8 Q40 4 41.5 8 L41.5 22 Q40 20 38.5 22 Z" fill="#A8261F"/>
+              <rect x="36" y="50" width="8" height="3" rx="1" fill="#8A8A8A"/>
+              <rect x="37.5" y="53" width="5" height="14" rx="2" fill="#5F5F5F"/>
+              <rect x="38" y="67" width="4" height="2" rx="1" fill="#3A3A3A"/>
+            </g>
+          </svg>
+          <div style={{ fontSize:20, fontWeight:800, letterSpacing:1, color:TEXT }}>CHEFCOST</div>
+          <div style={{ fontSize:10, fontWeight:600, letterSpacing:3, color:TEXT2, textTransform:"uppercase", marginTop:-6 }}>Food Cost Manager</div>
         </div>
 
         <div style={{ ...g.card, padding:24, display:"flex", flexDirection:"column", gap:14 }}>
@@ -3020,7 +3039,10 @@ export default function App() {
               {/* Logo area */}
               <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", borderBottom:`1px solid ${BDR}` }}>
                 <div style={{ width:36, height:36, background:ACCENT, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                  <span style={{ fontSize:15, fontWeight:800, color:"#fff", letterSpacing:-0.5 }}>CC</span>
+                  <svg width="20" height="20" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="rotate(-28, 40, 40)"><rect x="38.5" y="8" width="3" height="38" rx="1.5" fill="white"/><path d="M38.5 8 Q40 4 41.5 8 L41.5 20 Q40 18 38.5 20 Z" fill="rgba(255,255,255,0.7)"/><rect x="37.5" y="46" width="5" height="12" rx="2" fill="rgba(255,255,255,0.5)"/></g>
+                    <g transform="rotate(28, 40, 40)"><rect x="38.5" y="8" width="3" height="38" rx="1.5" fill="white"/><path d="M38.5 8 Q40 4 41.5 8 L41.5 20 Q40 18 38.5 20 Z" fill="rgba(255,255,255,0.7)"/><rect x="37.5" y="46" width="5" height="12" rx="2" fill="rgba(255,255,255,0.5)"/></g>
+                  </svg>
                 </div>
                 <div style={{ lineHeight:1.2, minWidth:0 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:TEXT }}>ChefCost</div>
@@ -3058,7 +3080,10 @@ export default function App() {
               <div style={{ padding:isMobile?"10px 16px":"11px 22px", borderBottom:`1px solid ${BDR}`, display:"flex", alignItems:"center", gap:12, background:SURF, position:"sticky", top:0, zIndex:10 }}>
                 {isMobile&&(
                   <div style={{ width:30, height:30, background:ACCENT, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                    <span style={{ fontSize:12, fontWeight:800, color:"#fff" }}>CC</span>
+                    <svg width="17" height="17" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <g transform="rotate(-28, 40, 40)"><rect x="38.5" y="8" width="3" height="38" rx="1.5" fill="white"/><rect x="37.5" y="46" width="5" height="12" rx="2" fill="rgba(255,255,255,0.5)"/></g>
+                      <g transform="rotate(28, 40, 40)"><rect x="38.5" y="8" width="3" height="38" rx="1.5" fill="white"/><rect x="37.5" y="46" width="5" height="12" rx="2" fill="rgba(255,255,255,0.5)"/></g>
+                    </svg>
                   </div>
                 )}
                 <span style={{ fontSize:isMobile?14:15, fontWeight:600, color:TEXT, flex:1 }}>
