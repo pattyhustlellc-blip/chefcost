@@ -3,8 +3,8 @@ import React, { useState, useRef, useEffect, createContext, useContext } from "r
 // @ts-ignore
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = "https://zzquivyrvttdjusafvgn.supabase.co";
-const SUPABASE_KEY = "sb_publishable_wRUWzTFYMBVskBHmNP3MBw_-3po6dXb";
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || "https://zzquivyrvttdjusafvgn.supabase.co";
+const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY || "sb_publishable_wRUWzTFYMBVskBHmNP3MBw_-3po6dXb";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const LOGO_URL = "https://i.ibb.co/848yS9KQ/CC-removebg-preview.png";
