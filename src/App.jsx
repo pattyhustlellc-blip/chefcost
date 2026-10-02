@@ -2888,15 +2888,28 @@ function MobileBottomNav({ page, setPage, lang, pendingShopping }) {
 export default function App() {
   const isMobile = useIsMobile();
   const [currentUser, setUserState] = useState(()=>{
-    try { const s=sessionStorage.getItem("chefcost_user"); return s?JSON.parse(s):null; } catch(e){ return null; }
+    try {
+      // If no "alive" heartbeat exists, the app was closed — clear the saved user
+      const alive = localStorage.getItem("chefcost_alive");
+      if (!alive) localStorage.removeItem("chefcost_user");
+      const s = localStorage.getItem("chefcost_user");
+      return s ? JSON.parse(s) : null;
+    } catch(e){ return null; }
   });
   function setUser(u) {
     setUserState(u);
     try {
-      if (u) sessionStorage.setItem("chefcost_user", JSON.stringify(u));
-      else sessionStorage.removeItem("chefcost_user");
+      if (u) localStorage.setItem("chefcost_user", JSON.stringify(u));
+      else { localStorage.removeItem("chefcost_user"); localStorage.removeItem("chefcost_alive"); }
     } catch(e) {}
   }
+  // Heartbeat: mark app as open; clear on close
+  useEffect(() => {
+    localStorage.setItem("chefcost_alive", "1");
+    const onUnload = () => localStorage.removeItem("chefcost_alive");
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, []);
   const [users,       setUsers]       = useState([]);
   const [ingredients, setIngredients] = useState([]);
   const [recipes,     setRecipes]     = useState([]);
