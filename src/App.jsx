@@ -447,100 +447,242 @@ function Login() {
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
 function Dashboard() {
   const { ingredients, recipes, lang, pendingShopping, setPage, shoppingSubmitted, shoppingSubmittedBy } = useApp();
-  const calcs   = recipes.map(r => ({ ...r, ...calcRecipe(r, ingredients) }));
-  const priceUp = ingredients.filter(i => i.price > i.prev_price);
-  const critical= ingredients.filter(i => parseFloat(i.stock) <= (parseFloat(i.min_stock)||5));
-  const avgCost = calcs.length ? calcs.reduce((s,r)=>s+r.cpp,0)/calcs.length : 0;
+  const isMobile = useIsMobile();
+  const calcs    = recipes.map(r => ({ ...r, ...calcRecipe(r, ingredients, recipes) }));
+  const menuDishes = calcs.filter(r => !r.is_subrecipe);
+  const priceUp  = ingredients.filter(i => i.price > i.prev_price);
+  const critical = ingredients.filter(i => parseFloat(i.stock) <= (parseFloat(i.min_stock)||5));
+  const avgCost  = menuDishes.length ? menuDishes.reduce((s,r)=>s+r.cpp,0)/menuDishes.length : 0;
+  const topDish  = menuDishes.length ? [...menuDishes].sort((a,b)=>b.margin-a.margin)[0] : null;
+  const sorted   = [...menuDishes].sort((a,b)=>b.margin-a.margin);
+
+  // Food cost % = cost / sell price * 100
+  const fcPct = topDish && topDish.selling_price > 0 ? (topDish.cpp / topDish.selling_price) * 100 : 0;
+  const fcColor = fcPct <= 30 ? FC_OK : fcPct <= 40 ? FC_WARN : FC_ERR;
+  const fcBarW  = Math.min(fcPct, 100);
 
   return (
-    <div style={{ padding:20, display:"flex", flexDirection:"column", gap:16 }}>
-      {shoppingSubmitted&&(
-        <div style={{background:"rgba(15,123,15,0.06)",border:`1px solid rgba(15,123,15,0.25)`,borderRadius:8,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onClick={()=>setPage("shopping")}>
-          <i className="ti ti-shopping-cart" style={{fontSize:20,color:FC_OK,flexShrink:0}}/>
-          <div style={{flex:1}}>
-            <div style={{fontSize:13,fontWeight:600,color:FC_OK}}>{lang==="en"?"Shopping list ready to buy!":"¡Lista de compras lista para comprar!"}</div>
-            <div style={{fontSize:11,color:TEXT2}}>{lang==="en"?`Submitted by ${shoppingSubmittedBy} · Tap to view`:`Enviada por ${shoppingSubmittedBy} · Toca para ver`}</div>
+    <div style={{ padding: isMobile?12:20, display:"flex", flexDirection:"column", gap:12 }}>
+
+      {/* ── Alerts banner ── */}
+      {priceUp.length > 0 && (
+        <div style={{ background:WARN_BG, border:`1px solid ${WARN_BDR}`, borderRadius:10, padding:"11px 16px", display:"flex", alignItems:"center", gap:10 }}>
+          <i className="ti ti-alert-triangle" style={{ fontSize:18, color:WARN_ICO, flexShrink:0 }}/>
+          <div style={{ flex:1, fontSize:13, color:"#7A5000", fontWeight:600 }}>
+            {lang==="en"
+              ? `${priceUp.length} ingredient${priceUp.length>1?"s":""} rose in price this week`
+              : `${priceUp.length} ingrediente${priceUp.length>1?"s":""} subieron de precio esta semana`}
+            {priceUp.length <= 3 && (
+              <span style={{ fontWeight:400, color:WARN_ICO }}>
+                {" — "}{priceUp.map(i=>i.name).join(", ")}
+              </span>
+            )}
           </div>
-          <i className="ti ti-chevron-right" style={{fontSize:14,color:FC_OK}}/>
         </div>
       )}
-      {!shoppingSubmitted&&pendingShopping>0&&(
-        <div style={{background:"rgba(239,159,39,0.08)",border:"1px solid rgba(239,159,39,0.3)",borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onClick={()=>setPage("shopping")}>
-          <i className="ti ti-shopping-cart" style={{fontSize:20,color:"#EF9F27",flexShrink:0}}/>
-          <div style={{flex:1}}>
-            <div style={{fontSize:13,fontWeight:700,color:"#EF9F27"}}>{lang==="en"?"Shopping list pending":"Lista de compras pendiente"}</div>
-            <div style={{fontSize:11,color:TEXT2}}>{lang==="en"?`You have ${pendingShopping} item${pendingShopping>1?"s":""} to buy`:`Tienes ${pendingShopping} ítem${pendingShopping>1?"s":""} por comprar`}</div>
+      {shoppingSubmitted && (
+        <div style={{ background:"rgba(15,123,15,0.06)", border:`1px solid rgba(15,123,15,0.25)`, borderRadius:10, padding:"11px 16px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={()=>setPage("shopping")}>
+          <i className="ti ti-shopping-cart" style={{ fontSize:18, color:FC_OK, flexShrink:0 }}/>
+          <div style={{ flex:1, fontSize:13, fontWeight:600, color:FC_OK }}>
+            {lang==="en"?"Shopping list ready to buy!":"¡Lista de compras lista para comprar!"}
+            <span style={{ fontWeight:400, color:TEXT2, marginLeft:6 }}>{lang==="en"?`by ${shoppingSubmittedBy}`:`por ${shoppingSubmittedBy}`}</span>
           </div>
-          <i className="ti ti-chevron-right" style={{fontSize:14,color:"#EF9F27"}}/>
+          <i className="ti ti-chevron-right" style={{ fontSize:14, color:FC_OK }}/>
         </div>
       )}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:10 }}>
+      {!shoppingSubmitted && pendingShopping > 0 && (
+        <div style={{ background:"rgba(239,159,39,0.06)", border:"1px solid rgba(239,159,39,0.3)", borderRadius:10, padding:"11px 16px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={()=>setPage("shopping")}>
+          <i className="ti ti-shopping-cart" style={{ fontSize:18, color:"#EF9F27", flexShrink:0 }}/>
+          <div style={{ flex:1, fontSize:13, fontWeight:600, color:"#EF9F27" }}>
+            {lang==="en"?"Shopping list pending":"Lista de compras pendiente"}
+            <span style={{ fontWeight:400, color:TEXT2, marginLeft:6 }}>{lang==="en"?`${pendingShopping} item${pendingShopping>1?"s":""}`:`${pendingShopping} ítem${pendingShopping>1?"s":""}`}</span>
+          </div>
+          <i className="ti ti-chevron-right" style={{ fontSize:14, color:"#EF9F27" }}/>
+        </div>
+      )}
+
+      {/* ── KPI row ── */}
+      <div style={{ display:"grid", gridTemplateColumns:`repeat(${isMobile?2:4},1fr)`, gap:8 }}>
         {[
-          { label:t("totalIngredients",lang), value:ingredients.length,   sub:t("ingredientsRegistered",lang),          color:TEXT },
-          { label:t("activeRecipes",lang), value:recipes.length,       sub:t("inMenu",lang),              color:TEXT },
-          { label:t("avgCost",lang),  value:`$${avgCost.toFixed(2)}`, sub:t("perPortion",lang),      color:"#EF9F27" },
-          { label:t("priceAlerts",lang),  value:priceUp.length,       sub:t("roseThisWeek",lang), color:"#E24B4A" },
+          { icon:"ti-basket",       label:lang==="en"?"Ingredients":"Ingredientes",  value:ingredients.length,            sub:lang==="en"?"registered":"registrados",   color:TEXT },
+          { icon:"ti-book",         label:lang==="en"?"Menu dishes":"Platos",        value:menuDishes.length,             sub:lang==="en"?"in menu":"en menú",           color:TEXT },
+          { icon:"ti-currency-dollar", label:lang==="en"?"Avg cost":"Costo prom.",  value:`$${avgCost.toFixed(2)}`,      sub:lang==="en"?"per portion":"por porción",    color:"#EF9F27" },
+          { icon:"ti-trending-up",  label:lang==="en"?"Price alerts":"Alertas",     value:priceUp.length,                sub:lang==="en"?"rose this week":"subieron",   color:priceUp.length>0?FC_ERR:FC_OK },
         ].map((s,i) => (
           <div key={i} style={{ background:SURF, border:`1px solid ${BDR}`, borderRadius:10, padding:"12px 14px" }}>
-            <div style={{ fontSize:10, color:TEXT2, marginBottom:4 }}>{s.label}</div>
-            <div style={{ fontSize:22, fontWeight:700, color:s.color }}>{s.value}</div>
-            <div style={{ fontSize:10, color:TEXT2, marginTop:2 }}>{s.sub}</div>
+            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
+              <i className={`ti ${s.icon}`} style={{ fontSize:14, color:s.color }}/>
+              <span style={{ fontSize:10, color:TEXT2, fontWeight:600, textTransform:"uppercase", letterSpacing:0.4 }}>{s.label}</span>
+            </div>
+            <div style={{ fontSize:24, fontWeight:700, color:s.color, lineHeight:1 }}>{s.value}</div>
+            <div style={{ fontSize:10, color:TEXT2, marginTop:4 }}>{s.sub}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-        <div style={g.card}>
-          <div style={{ padding:"11px 16px", borderBottom:`1px solid ${BDR}`, background:SURF2, fontSize:12, fontWeight:600 }}>
-            <i className="ti ti-trending-up" style={{ marginRight:6, color:ACCENT }}/>{t("priceVariation",lang)}
+      {/* ── Hero card: top dish ── */}
+      {topDish && (
+        <div style={{ background:SURF, border:`1px solid ${BDR}`, borderRadius:12, overflow:"hidden" }}>
+          <div style={{ padding:"10px 16px", borderBottom:`1px solid ${BDR}`, background:SURF2, display:"flex", alignItems:"center", gap:8 }}>
+            <i className="ti ti-award" style={{ fontSize:15, color:ACCENT }}/>
+            <span style={{ fontSize:12, fontWeight:700, color:TEXT, letterSpacing:0.3 }}>
+              {lang==="en"?"TOP PERFORMER":"MEJOR PLATO"}
+            </span>
+            <span style={{ fontSize:10, color:TEXT2, marginLeft:4 }}>{lang==="en"?"highest margin this week":"mayor margen esta semana"}</span>
           </div>
+          <div style={{ padding:16, display:"flex", flexDirection: isMobile?"column":"row", gap:16, alignItems: isMobile?"stretch":"center" }}>
+            {/* Dish name + stats */}
+            <div style={{ flex:1, display:"flex", flexDirection:"column", gap:8 }}>
+              <div style={{ fontSize:18, fontWeight:800, color:TEXT }}>{lang==="en"&&topDish.name_en?topDish.name_en:topDish.name}</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+                <div style={{ background:SURF2, border:`1px solid ${BDR}`, borderRadius:8, padding:"8px 14px", textAlign:"center" }}>
+                  <div style={{ fontSize:10, color:TEXT2, marginBottom:2 }}>{lang==="en"?"Cost/portion":"Costo/porción"}</div>
+                  <div style={{ fontSize:17, fontWeight:700, color:TEXT }}>${topDish.cpp.toFixed(2)}</div>
+                </div>
+                <div style={{ background:SURF2, border:`1px solid ${BDR}`, borderRadius:8, padding:"8px 14px", textAlign:"center" }}>
+                  <div style={{ fontSize:10, color:TEXT2, marginBottom:2 }}>{lang==="en"?"Sell price":"Precio venta"}</div>
+                  <div style={{ fontSize:17, fontWeight:700, color:TEXT }}>${parseFloat(topDish.selling_price).toFixed(2)}</div>
+                </div>
+                <div style={{ background:SURF2, border:`1px solid ${BDR}`, borderRadius:8, padding:"8px 14px", textAlign:"center" }}>
+                  <div style={{ fontSize:10, color:TEXT2, marginBottom:2 }}>{lang==="en"?"Profit":"Ganancia"}</div>
+                  <div style={{ fontSize:17, fontWeight:700, color:FC_OK }}>${(topDish.selling_price - topDish.cpp).toFixed(2)}</div>
+                </div>
+              </div>
+            </div>
+            {/* Food cost % gauge */}
+            <div style={{ minWidth:180, display:"flex", flexDirection:"column", gap:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline" }}>
+                <span style={{ fontSize:11, color:TEXT2, fontWeight:600 }}>{lang==="en"?"Food cost %":"% Costo alimento"}</span>
+                <span style={{ fontSize:20, fontWeight:800, color:fcColor }}>{fcPct.toFixed(1)}%</span>
+              </div>
+              <div style={{ background:BDR, borderRadius:99, height:8, overflow:"hidden" }}>
+                <div style={{ width:`${fcBarW}%`, height:"100%", background:fcColor, borderRadius:99, transition:"width 0.6s ease" }}/>
+              </div>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:TEXT2 }}>
+                <span>0%</span>
+                <span style={{ color:FC_OK }}>≤30% ✓</span>
+                <span>100%</span>
+              </div>
+              <div style={{ ...g.badge(fcPct<=30?"ok":fcPct<=40?"warn":"err"), alignSelf:"flex-start", fontSize:11, padding:"4px 10px" }}>
+                {fcPct<=30
+                  ? (lang==="en"?"Excellent":"Excelente")
+                  : fcPct<=40
+                  ? (lang==="en"?"Acceptable":"Aceptable")
+                  : (lang==="en"?"High cost":"Costo alto")}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Menu table ── */}
+      <div style={{ background:SURF, border:`1px solid ${BDR}`, borderRadius:12, overflow:"hidden" }}>
+        <div style={{ padding:"10px 16px", borderBottom:`1px solid ${BDR}`, background:SURF2, display:"flex", alignItems:"center", gap:8 }}>
+          <i className="ti ti-chef-hat" style={{ fontSize:15, color:ACCENT }}/>
+          <span style={{ fontSize:12, fontWeight:700, color:TEXT, letterSpacing:0.3 }}>
+            {lang==="en"?"MENU — by margin":"MENÚ — por margen"}
+          </span>
+        </div>
+        {isMobile ? (
+          /* Mobile: stacked cards */
+          <div style={{ display:"flex", flexDirection:"column" }}>
+            {sorted.map((r, idx) => {
+              const fc = r.selling_price > 0 ? (r.cpp / r.selling_price) * 100 : 0;
+              return (
+                <div key={r.id} style={{ padding:"12px 16px", borderBottom:`1px solid ${BDR}`, display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ width:24, height:24, borderRadius:"50%", background:`${ACCENT}12`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:ACCENT, flexShrink:0 }}>{idx+1}</div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:600, color:TEXT, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{lang==="en"&&r.name_en?r.name_en:r.name}</div>
+                    <div style={{ display:"flex", gap:10, marginTop:4, flexWrap:"wrap" }}>
+                      <span style={{ fontSize:11, color:TEXT2 }}>{lang==="en"?"Cost":"Costo"}: <b style={{ color:TEXT }}>${r.cpp.toFixed(2)}</b></span>
+                      <span style={{ fontSize:11, color:TEXT2 }}>{lang==="en"?"Price":"Precio"}: <b style={{ color:TEXT }}>${parseFloat(r.selling_price).toFixed(2)}</b></span>
+                      <span style={{ fontSize:11, color:TEXT2 }}>FC: <b style={{ color:fc<=30?FC_OK:fc<=40?FC_WARN:FC_ERR }}>{fc.toFixed(1)}%</b></span>
+                    </div>
+                  </div>
+                  <span style={{ ...g.badge(mType(r.margin)), fontSize:11, padding:"4px 8px" }}>{r.margin.toFixed(0)}%</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Desktop: full table */
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
             <thead><tr>
-              <th style={g.th}>{t("ingredient",lang)}</th>
-              <th style={g.th}>{t("previous",lang)}</th>
-              <th style={g.th}>{t("current",lang)}</th>
-              <th style={g.th}>{t("variation",lang)}</th>
+              <th style={{ ...g.th, width:28 }}>#</th>
+              <th style={g.th}>{lang==="en"?"Dish":"Plato"}</th>
+              <th style={g.th}>{lang==="en"?"Cost/portion":"Costo/porción"}</th>
+              <th style={g.th}>{lang==="en"?"Sell price":"Precio venta"}</th>
+              <th style={g.th}>{lang==="en"?"Food cost %":"% Costo alim."}</th>
+              <th style={g.th}>{lang==="en"?"Margin":"Margen"}</th>
             </tr></thead>
             <tbody>
-              {ingredients.filter(i=>i.price!==i.prev_price).slice(0,6).map(ing => {
-                const d = priceDiff(ing.price, ing.prev_price);
+              {sorted.map((r, idx) => {
+                const fc = r.selling_price > 0 ? (r.cpp / r.selling_price) * 100 : 0;
                 return (
-                  <tr key={ing.id} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    <td style={g.td}>{ing.name}</td>
-                    <td style={{ ...g.td, color:TEXT2 }}>${ing.prev_price.toFixed(2)}</td>
-                    <td style={{ ...g.td, fontWeight:600, color:ACCENT }}>${ing.price.toFixed(2)}</td>
-                    <td style={g.td}><span style={g.pp(d.up,d.same)}>{d.up?"+":"-"}{d.pct}%</span></td>
+                  <tr key={r.id} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <td style={{ ...g.td, color:TEXT2, width:28, textAlign:"center" }}>{idx+1}</td>
+                    <td style={{ ...g.td, fontWeight:600 }}>{lang==="en"&&r.name_en?r.name_en:r.name}</td>
+                    <td style={{ ...g.td, color:TEXT2 }}>${r.cpp.toFixed(2)}</td>
+                    <td style={g.td}>${parseFloat(r.selling_price).toFixed(2)}</td>
+                    <td style={g.td}><span style={{ fontSize:12, fontWeight:600, color:fc<=30?FC_OK:fc<=40?FC_WARN:FC_ERR }}>{fc.toFixed(1)}%</span></td>
+                    <td style={g.td}><span style={g.badge(mType(r.margin))}>{r.margin.toFixed(1)}%</span></td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-        </div>
-
-        <div style={g.card}>
-          <div style={{ padding:"11px 16px", borderBottom:`1px solid ${BDR}`, background:SURF2, fontSize:12, fontWeight:600 }}>
-            <i className="ti ti-book" style={{ marginRight:6, color:ACCENT }}/>{t("recipesByMargin",lang)}
-          </div>
-          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-            <thead><tr>
-              <th style={g.th}>{t("dish",lang)}</th>
-              <th style={g.th}>{t("costPerPortion",lang)}</th>
-              <th style={g.th}>{t("sellPrice",lang)}</th>
-              <th style={g.th}>{t("margin",lang)}</th>
-            </tr></thead>
-            <tbody>
-              {calcs.sort((a,b)=>b.margin-a.margin).map(r => (
-                <tr key={r.id} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                  <td style={{ ...g.td, fontWeight:500 }}>{lang==="en"&&r.name_en?r.name_en:r.name}</td>
-                  <td style={{ ...g.td, color:TEXT2 }}>${r.cpp.toFixed(2)}</td>
-                  <td style={g.td}>${parseFloat(r.selling_price).toFixed(2)}</td>
-                  <td style={g.td}><span style={g.badge(mType(r.margin))}>{r.margin.toFixed(1)}%</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        )}
       </div>
+
+      {/* ── Price changes ── */}
+      {priceUp.length > 0 && (
+        <div style={{ background:SURF, border:`1px solid ${BDR}`, borderRadius:12, overflow:"hidden" }}>
+          <div style={{ padding:"10px 16px", borderBottom:`1px solid ${BDR}`, background:SURF2, display:"flex", alignItems:"center", gap:8 }}>
+            <i className="ti ti-trending-up" style={{ fontSize:15, color:ACCENT }}/>
+            <span style={{ fontSize:12, fontWeight:700, color:TEXT, letterSpacing:0.3 }}>
+              {lang==="en"?"RECENT PRICE CHANGES":"CAMBIOS DE PRECIO RECIENTES"}
+            </span>
+          </div>
+          {isMobile ? (
+            <div style={{ display:"flex", flexDirection:"column" }}>
+              {ingredients.filter(i=>i.price!==i.prev_price).slice(0,6).map(ing => {
+                const d = priceDiff(ing.price, ing.prev_price);
+                return (
+                  <div key={ing.id} style={{ padding:"11px 16px", borderBottom:`1px solid ${BDR}`, display:"flex", alignItems:"center", gap:12 }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:TEXT, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{ing.name}</div>
+                      <div style={{ fontSize:11, color:TEXT2, marginTop:2 }}><span style={{ textDecoration:"line-through" }}>${ing.prev_price.toFixed(2)}</span> → <b style={{ color:ACCENT }}>${ing.price.toFixed(2)}</b></div>
+                    </div>
+                    <span style={g.pp(d.up,d.same)}>{d.up?"+":"-"}{d.pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+              <thead><tr>
+                <th style={g.th}>{lang==="en"?"Ingredient":"Ingrediente"}</th>
+                <th style={g.th}>{lang==="en"?"Previous":"Anterior"}</th>
+                <th style={g.th}>{lang==="en"?"Current":"Actual"}</th>
+                <th style={g.th}>{lang==="en"?"Change":"Cambio"}</th>
+              </tr></thead>
+              <tbody>
+                {ingredients.filter(i=>i.price!==i.prev_price).slice(0,6).map(ing => {
+                  const d = priceDiff(ing.price, ing.prev_price);
+                  return (
+                    <tr key={ing.id} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <td style={g.td}>{ing.name}</td>
+                      <td style={{ ...g.td, color:TEXT2 }}>${ing.prev_price.toFixed(2)}</td>
+                      <td style={{ ...g.td, fontWeight:600, color:ACCENT }}>${ing.price.toFixed(2)}</td>
+                      <td style={g.td}><span style={g.pp(d.up,d.same)}>{d.up?"+":"-"}{d.pct}%</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
     </div>
   );
