@@ -2887,16 +2887,13 @@ function MobileBottomNav({ page, setPage, lang, pendingShopping }) {
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 export default function App() {
   const isMobile = useIsMobile();
+  // Session lives ONLY in memory (window.__chefcostSession).
+  // localStorage stores the user record but NOT a valid session flag.
+  // When the PWA window closes and reopens, window.__chefcostSession is gone → login required.
   const [currentUser, setUserState] = useState(()=>{
     try {
-      // Check if last heartbeat was recent (within 10 seconds)
-      // If not, the app was truly closed — require login again
-      const last = parseInt(localStorage.getItem("chefcost_heartbeat") || "0", 10);
-      const elapsed = Date.now() - last;
-      if (elapsed > 10000) {
-        localStorage.removeItem("chefcost_user");
-        return null;
-      }
+      // Only restore session if the in-memory flag is set (same JS process / tab)
+      if (!window.__chefcostSession) return null;
       const s = localStorage.getItem("chefcost_user");
       return s ? JSON.parse(s) : null;
     } catch(e){ return null; }
@@ -2904,18 +2901,15 @@ export default function App() {
   function setUser(u) {
     setUserState(u);
     try {
-      if (u) localStorage.setItem("chefcost_user", JSON.stringify(u));
-      else { localStorage.removeItem("chefcost_user"); localStorage.removeItem("chefcost_heartbeat"); }
+      if (u) {
+        window.__chefcostSession = true;
+        localStorage.setItem("chefcost_user", JSON.stringify(u));
+      } else {
+        window.__chefcostSession = false;
+        localStorage.removeItem("chefcost_user");
+      }
     } catch(e) {}
   }
-  // Write heartbeat timestamp every 3 seconds while app is open
-  useEffect(() => {
-    localStorage.setItem("chefcost_heartbeat", Date.now().toString());
-    const interval = setInterval(() => {
-      localStorage.setItem("chefcost_heartbeat", Date.now().toString());
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
   const [users,       setUsers]       = useState([]);
   const [ingredients, setIngredients] = useState([]);
   const [recipes,     setRecipes]     = useState([]);
