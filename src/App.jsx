@@ -3056,7 +3056,7 @@ export default function App() {
   const [ingredients, setIngredients] = useState([]);
   const [recipes,     setRecipes]     = useState([]);
   const [invoices,    setInvoices]    = useState([]);
-  const [lang,        setLang]        = useState("es");
+  const [lang,        setLang]        = useState("en");
   const [mainSupplier, setMainSupplier] = useState("Restaurant Depot");
   const [orderDays,   setOrderDays]   = useState([]);
   const [pendingShopping, setPendingShopping] = useState(0);
