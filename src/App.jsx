@@ -9,13 +9,20 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const LOGO_URL = "https://i.ibb.co/848yS9KQ/CC-removebg-preview.png";
 const ICON_URL = "https://i.ibb.co/4RDLtvDb/Small-CC.png";
-const ACCENT = "#39ff6a";
-const BG    = "#0f0f0f";
-const SURF  = "#1a1a1a";
-const SURF2 = "#222222";
-const BDR   = "#2a2a2a";
-const TEXT  = "#f0f0f0";
-const TEXT2 = "#888";
+const ACCENT  = "#C8312B";
+const ACCENT2 = "#A8261F";
+const BG      = "#F3F3F3";
+const SURF    = "#FFFFFF";
+const SURF2   = "#F9F9F9";
+const BDR     = "#E5E5E5";
+const TEXT    = "#1B1B1B";
+const TEXT2   = "#5F5F5F";
+const WARN_BG = "#FFF4CE";
+const WARN_BDR= "#F1E2A9";
+const WARN_ICO= "#9D5D00";
+const FC_OK   = "#0F7B0F";
+const FC_WARN = "#9D5D00";
+const FC_ERR  = "#C42B1C";
 const MOBILE_BP = 768;
 
 function useIsMobile() {
@@ -181,7 +188,7 @@ function ToastProvider({ children }) {
     setToasts(p=>[...p, {id, msg, type}]);
     setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)), 3000);
   }
-  const colors = { success:{bg:"rgba(57,255,106,0.15)",border:ACCENT,icon:"ti-check",color:ACCENT}, error:{bg:"rgba(226,75,74,0.15)",border:"#E24B4A",icon:"ti-x",color:"#E24B4A"}, info:{bg:"rgba(55,138,221,0.15)",border:"#378ADD",icon:"ti-info-circle",color:"#378ADD"} };
+  const colors = { success:{bg:SURF,border:FC_OK,icon:"ti-check",color:FC_OK}, error:{bg:SURF,border:FC_ERR,icon:"ti-x",color:FC_ERR}, info:{bg:SURF,border:"#378ADD",icon:"ti-info-circle",color:"#378ADD"} };
   return (
     <ToastCtx.Provider value={showToast}>
       {children}
@@ -189,7 +196,7 @@ function ToastProvider({ children }) {
         {toasts.map(t=>{
           const c=colors[t.type]||colors.success;
           return (
-            <div key={t.id} style={{background:c.bg,border:`1px solid ${c.border}`,borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",gap:10,width:"100%",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",animation:"slideUp 0.3s ease"}}>
+            <div key={t.id} style={{background:c.bg,border:`1px solid ${c.border}`,borderRadius:8,padding:"12px 16px",display:"flex",alignItems:"center",gap:10,width:"100%",boxShadow:"0 4px 20px rgba(0,0,0,0.12)",animation:"slideUp 0.3s ease"}}>
               <i className={`ti ${c.icon}`} style={{fontSize:16,color:c.color,flexShrink:0}}/>
               <span style={{fontSize:13,color:TEXT,fontWeight:500}}>{t.msg}</span>
             </div>
@@ -324,22 +331,22 @@ function mType(p)  { return p >= 65 ? "ok"   : p >= 45 ? "warn"    : "err";     
 
 // ─── shared styles ──────────────────────────────────────────────────────────
 const g = {
-  card:  { background:SURF,  border:`1px solid ${BDR}`, borderRadius:12, overflow:"hidden" },
+  card:  { background:SURF,  border:`1px solid ${BDR}`, borderRadius:8, overflow:"hidden" },
   th:    { padding:"8px 12px", textAlign:"left", fontSize:10, fontWeight:600, color:TEXT2, borderBottom:`1px solid ${BDR}`, background:SURF2, letterSpacing:0.5, textTransform:"uppercase", whiteSpace:"nowrap" },
   td:    { padding:"9px 12px", color:TEXT, borderBottom:`1px solid ${BDR}`, verticalAlign:"middle", fontSize:12 },
-  inp:   { background:"#111", border:`1px solid ${BDR}`, borderRadius:6, padding:"7px 10px", color:TEXT, fontSize:12, outline:"none", width:"100%" },
-  sel:   { background:"#111", border:`1px solid ${BDR}`, borderRadius:6, padding:"7px 8px",  color:TEXT, fontSize:12, outline:"none" },
-  btnP:  { background:ACCENT, color:"#000", border:"none", borderRadius:8, padding:"9px 18px", fontSize:12, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:6 },
-  btnS:  { background:"transparent", color:TEXT2, border:`1px solid ${BDR}`, borderRadius:8, padding:"9px 18px", fontSize:12, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:6 },
-  btnI:  { background:"rgba(255,255,255,0.06)", color:TEXT, border:`1px solid ${BDR}`, borderRadius:6, padding:"6px 12px", fontSize:11, fontWeight:500, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:5 },
-  btnD:  { background:"rgba(226,75,74,0.08)", color:"#E24B4A", border:`1px solid rgba(226,75,74,0.25)`, borderRadius:6, padding:"6px 12px", fontSize:11, fontWeight:500, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:5 },
-  badge: (t) => { const m={ok:{bg:"rgba(57,255,106,0.1)",c:ACCENT},warn:{bg:"rgba(239,159,39,0.1)",c:"#EF9F27"},err:{bg:"rgba(226,75,74,0.1)",c:"#E24B4A"},info:{bg:"rgba(55,138,221,0.1)",c:"#378ADD"},gray:{bg:"rgba(255,255,255,0.06)",c:TEXT2}}; const v=m[t]||m.gray; return {display:"inline-flex",alignItems:"center",gap:4,background:v.bg,color:v.c,fontSize:10,padding:"2px 8px",borderRadius:99,fontWeight:600,whiteSpace:"nowrap"}; },
+  inp:   { background:"#FBFBFB", border:`1px solid ${BDR}`, borderBottom:`2px solid #8A8A8A`, borderRadius:4, padding:"8px 10px", color:TEXT, fontSize:13, outline:"none", width:"100%", fontFamily:"'Segoe UI Variable','Segoe UI',system-ui,sans-serif" },
+  sel:   { background:"#FBFBFB", border:`1px solid ${BDR}`, borderBottom:`2px solid #8A8A8A`, borderRadius:4, padding:"8px 8px",  color:TEXT, fontSize:13, outline:"none", fontFamily:"'Segoe UI Variable','Segoe UI',system-ui,sans-serif" },
+  btnP:  { background:ACCENT, color:"#fff", border:"none", borderRadius:5, padding:"9px 18px", fontSize:13, fontWeight:600, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:6, minHeight:44 },
+  btnS:  { background:"transparent", color:TEXT2, border:`1px solid ${BDR}`, borderRadius:5, padding:"9px 18px", fontSize:13, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:6, minHeight:44 },
+  btnI:  { background:SURF2, color:TEXT, border:`1px solid ${BDR}`, borderRadius:5, padding:"6px 12px", fontSize:12, fontWeight:500, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:5, minHeight:36 },
+  btnD:  { background:"rgba(200,49,43,0.06)", color:ACCENT, border:`1px solid rgba(200,49,43,0.2)`, borderRadius:5, padding:"6px 12px", fontSize:12, fontWeight:500, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:5, minHeight:36 },
+  badge: (t) => { const m={ok:{bg:"rgba(15,123,15,0.1)",c:FC_OK},warn:{bg:"rgba(157,93,0,0.1)",c:FC_WARN},err:{bg:"rgba(196,43,28,0.1)",c:FC_ERR},info:{bg:"rgba(55,138,221,0.1)",c:"#378ADD"},gray:{bg:SURF2,c:TEXT2}}; const v=m[t]||m.gray; return {display:"inline-flex",alignItems:"center",gap:4,background:v.bg,color:v.c,fontSize:10,padding:"2px 8px",borderRadius:99,fontWeight:600,whiteSpace:"nowrap"}; },
   catH:  (c) => ({ display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:`${c}11`,borderBottom:`1px solid ${BDR}`,fontSize:11,fontWeight:700,color:c,letterSpacing:0.5,textTransform:"uppercase" }),
-  modal: { position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",display:"flex",alignItems:window.innerWidth<768?"flex-end":"center",justifyContent:"center",zIndex:999,padding:window.innerWidth<768?0:16 },
-  mbox:  { background:SURF,border:`1px solid ${BDR}`,borderRadius:window.innerWidth<768?"14px 14px 0 0":"14px",padding:window.innerWidth<768?20:24,width:window.innerWidth<768?"100%":580,maxWidth:"100vw",maxHeight:window.innerWidth<768?"92vh":"92vh",overflowY:"auto",display:"flex",flexDirection:"column",gap:14 },
-  lbl:   { fontSize:11, color:TEXT2, fontWeight:500 },
-  avt:   (c) => ({ width:34,height:34,borderRadius:"50%",background:`${c}33`,border:`2px solid ${c}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:c,flexShrink:0 }),
-  pp:    (up,same) => ({ display:"inline-flex",alignItems:"center",gap:3,fontSize:10,padding:"2px 7px",borderRadius:99,fontWeight:600,background:same?"rgba(255,255,255,0.05)":up?"rgba(226,75,74,0.1)":"rgba(57,255,106,0.1)",color:same?TEXT2:up?"#E24B4A":ACCENT }),
+  modal: { position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:window.innerWidth<768?"flex-end":"center",justifyContent:"center",zIndex:999,padding:window.innerWidth<768?0:16 },
+  mbox:  { background:SURF,border:`1px solid ${BDR}`,borderRadius:window.innerWidth<768?"12px 12px 0 0":"10px",padding:window.innerWidth<768?20:24,width:window.innerWidth<768?"100%":560,maxWidth:"100vw",maxHeight:window.innerWidth<768?"92vh":"92vh",overflowY:"auto",display:"flex",flexDirection:"column",gap:14,boxShadow:"0 8px 32px rgba(0,0,0,0.12)" },
+  lbl:   { fontSize:12, color:TEXT2, fontWeight:500 },
+  avt:   (c) => ({ width:34,height:34,borderRadius:"50%",background:`${c}18`,border:`1.5px solid ${c}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:c,flexShrink:0 }),
+  pp:    (up,same) => ({ display:"inline-flex",alignItems:"center",gap:3,fontSize:10,padding:"2px 7px",borderRadius:99,fontWeight:600,background:same?SURF2:up?"rgba(196,43,28,0.08)":"rgba(15,123,15,0.08)",color:same?TEXT2:up?FC_ERR:FC_OK }),
 };
 
 const NAV = [
@@ -386,9 +393,8 @@ function Login() {
     <div style={{ minHeight:"100vh", background:BG, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
       <div style={{ width:"100%", maxWidth:400, display:"flex", flexDirection:"column", gap:20 }}>
 
-        <div style={{ textAlign:"center", position:"relative" }}>
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 50% 50%, rgba(57,255,106,0.15) 0%, transparent 70%)", pointerEvents:"none" }}/>
-          <img src={LOGO_URL} alt="ChefCost" style={{ width:200, height:200, objectFit:"contain", display:"block", margin:"0 auto", filter:"drop-shadow(0 0 12px rgba(57,255,106,0.9)) drop-shadow(0 0 30px rgba(57,255,106,0.4))", position:"relative" }}/>
+        <div style={{ textAlign:"center" }}>
+          <img src={LOGO_URL} alt="ChefCost" style={{ width:160, height:160, objectFit:"contain", display:"block", margin:"0 auto" }}/>
         </div>
 
         <div style={{ ...g.card, padding:24, display:"flex", flexDirection:"column", gap:14 }}>
@@ -446,13 +452,13 @@ function Dashboard() {
   return (
     <div style={{ padding:20, display:"flex", flexDirection:"column", gap:16 }}>
       {shoppingSubmitted&&(
-        <div style={{background:"rgba(57,255,106,0.08)",border:`1px solid ${ACCENT}`,borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onClick={()=>setPage("shopping")}>
-          <i className="ti ti-shopping-cart" style={{fontSize:20,color:ACCENT,flexShrink:0}}/>
+        <div style={{background:"rgba(15,123,15,0.06)",border:`1px solid rgba(15,123,15,0.25)`,borderRadius:8,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onClick={()=>setPage("shopping")}>
+          <i className="ti ti-shopping-cart" style={{fontSize:20,color:FC_OK,flexShrink:0}}/>
           <div style={{flex:1}}>
-            <div style={{fontSize:13,fontWeight:700,color:ACCENT}}>{lang==="en"?"Shopping list ready to buy!":"¡Lista de compras lista para comprar!"}</div>
+            <div style={{fontSize:13,fontWeight:600,color:FC_OK}}>{lang==="en"?"Shopping list ready to buy!":"¡Lista de compras lista para comprar!"}</div>
             <div style={{fontSize:11,color:TEXT2}}>{lang==="en"?`Submitted by ${shoppingSubmittedBy} · Tap to view`:`Enviada por ${shoppingSubmittedBy} · Toca para ver`}</div>
           </div>
-          <i className="ti ti-chevron-right" style={{fontSize:14,color:ACCENT}}/>
+          <i className="ti ti-chevron-right" style={{fontSize:14,color:FC_OK}}/>
         </div>
       )}
       {!shoppingSubmitted&&pendingShopping>0&&(
@@ -702,13 +708,13 @@ function Ingredients() {
             <div style={{fontSize:11,color:"#EF9F27",fontWeight:600,marginBottom:8}}>{lang==="en"?"Group":"Grupo"} {gi+1} — {lang==="en"?"select which to keep:":"selecciona cuál conservar:"}</div>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               {group.items.map(ing=>(
-                <div key={ing.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:8,background:group.keepId===ing.id?"rgba(57,255,106,0.08)":SURF,border:`1px solid ${group.keepId===ing.id?ACCENT:BDR}`,cursor:"pointer"}} onClick={()=>setDupGroups(prev=>prev.map((g,i)=>i===gi?{...g,keepId:ing.id}:g))}>
+                <div key={ing.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:8,background:group.keepId===ing.id?"rgba(200,49,43,0.06)":SURF,border:`1px solid ${group.keepId===ing.id?ACCENT:BDR}`,cursor:"pointer"}} onClick={()=>setDupGroups(prev=>prev.map((g,i)=>i===gi?{...g,keepId:ing.id}:g))}>
                   <div style={{width:16,height:16,borderRadius:"50%",border:`2px solid ${group.keepId===ing.id?ACCENT:BDR}`,background:group.keepId===ing.id?ACCENT:"transparent",flexShrink:0}}/>
                   <div style={{flex:1}}>
                     <div style={{fontSize:12,fontWeight:600}}>{ing.name}</div>
                     <div style={{fontSize:10,color:TEXT2}}>{ing.supplier} · ${ing.price}/{ing.unit_use} · stock: {ing.stock} {ing.unit_inventory}</div>
                   </div>
-                  {group.keepId===ing.id&&<span style={{fontSize:10,background:"rgba(57,255,106,0.15)",color:ACCENT,padding:"2px 8px",borderRadius:99,fontWeight:700}}>{lang==="en"?"KEEP":"CONSERVAR"}</span>}
+                  {group.keepId===ing.id&&<span style={{fontSize:10,background:"rgba(200,49,43,0.10)",color:ACCENT,padding:"2px 8px",borderRadius:99,fontWeight:700}}>{lang==="en"?"KEEP":"CONSERVAR"}</span>}
                 </div>
               ))}
             </div>
@@ -805,7 +811,7 @@ function IngModal({ item, onSave, onClose, isNew, lang }) {
           <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("currentStock",lang)}</label><input style={g.inp} type="text" inputMode="decimal" value={f.stock} onChange={e=>sf("stock",e.target.value)}/></div>
           <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("minStock",lang)}</label><input style={g.inp} type="text" inputMode="decimal" placeholder="5" value={f.min_stock??""} onChange={e=>sf("min_stock",e.target.value)}/></div>
         </div>
-        {cpu && <div style={{fontSize:11,color:ACCENT,background:"rgba(57,255,106,0.07)",padding:"8px 12px",borderRadius:8}}><i className="ti ti-calculator" style={{marginRight:6}}/>{t("costPerUnit",lang)}: <strong>${cpu}</strong></div>}
+        {cpu && <div style={{fontSize:11,color:ACCENT,background:"rgba(200,49,43,0.05)",padding:"8px 12px",borderRadius:8}}><i className="ti ti-calculator" style={{marginRight:6}}/>{t("costPerUnit",lang)}: <strong>${cpu}</strong></div>}
         <div style={{display:"flex",gap:10}}>
           <button style={{...g.btnP,flex:1,justifyContent:"center"}} onClick={()=>onSave(f)}><i className="ti ti-check"/>{t("save",lang)}</button>
           <button style={g.btnS} onClick={onClose}>{t("cancel",lang)}</button>
@@ -915,22 +921,22 @@ function printRecipe(recipe, ingredients, lang) {
   styleTag.innerHTML = `
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
     #__recipe_print_container {
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Segoe UI Variable','Segoe UI',system-ui,sans-serif;
       color: #1a1a1a;
       background: #fff;
     }
     #__recipe_print_container .cc-header { display:flex; align-items:center; gap:16px; padding-bottom:18px; margin-bottom:18px; border-bottom:3px solid #1a1a1a; }
-    #__recipe_print_container .cc-logo-mark { width:54px; height:54px; border-radius:12px; background:#1a1a1a; color:#39ff6a; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; flex-shrink:0; letter-spacing:0.5px; }
-    #__recipe_print_container .cc-brand { font-size:10px; color:#39a35e; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:3px; }
+    #__recipe_print_container .cc-logo-mark { width:54px; height:54px; border-radius:12px; background:#1a1a1a; color:#C8312B; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; flex-shrink:0; letter-spacing:0.5px; }
+    #__recipe_print_container .cc-brand { font-size:10px; color:#C8312B; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:3px; }
     #__recipe_print_container .cc-title { font-size:22px; font-weight:800; color:#111; }
     #__recipe_print_container .info-strip { display:flex; border-radius:10px; overflow:hidden; border:1px solid #ddd; margin-bottom:22px; }
     #__recipe_print_container .info-cell { flex:1; padding:10px 14px; border-right:1px solid #e5e5e5; background:#fafafa; }
-    #__recipe_print_container .info-cell:nth-child(odd) { background:#f4faf6; }
+    #__recipe_print_container .info-cell:nth-child(odd) { background:#fafafa; }
     #__recipe_print_container .info-cell:last-child { border-right:none; }
     #__recipe_print_container .info-label { font-size:9px; color:#888; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:4px; }
     #__recipe_print_container .info-value { font-size:14px; font-weight:700; color:#1a1a1a; }
     #__recipe_print_container .section-title { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; color:#1a1a1a; margin:22px 0 10px 0; }
-    #__recipe_print_container .section-title .dot { width:8px; height:8px; border-radius:50%; background:#39ff6a; border:1px solid #1a9e4f; flex-shrink:0; }
+    #__recipe_print_container .section-title .dot { width:8px; height:8px; border-radius:50%; background:#C8312B; flex-shrink:0; }
     #__recipe_print_container .allergen-grid { display:grid; grid-template-columns:repeat(9,1fr); gap:6px; }
     #__recipe_print_container .allergen-cell { border:1px solid #e0e0e0; border-radius:8px; padding:7px 4px; text-align:center; background:#fafafa; }
     #__recipe_print_container .allergen-cell.has { border-color:#e0a8a4; background:#fdf0ef; }
@@ -941,14 +947,14 @@ function printRecipe(recipe, ingredients, lang) {
     #__recipe_print_container .ing-columns { display:flex; gap:30px; }
     #__recipe_print_container .ing-col { flex:1; }
     #__recipe_print_container .ing-row { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid #eee; font-size:12px; }
-    #__recipe_print_container .ing-qty { color:#39a35e; font-weight:700; min-width:68px; flex-shrink:0; }
+    #__recipe_print_container .ing-qty { color:#C8312B; font-weight:700; min-width:68px; flex-shrink:0; }
     #__recipe_print_container .ing-name { color:#222; }
     #__recipe_print_container .prep-section { font-size:12.5px; line-height:1.7; }
-    #__recipe_print_container .stage-block { margin-bottom:14px; padding-left:14px; border-left:3px solid #39ff6a; }
+    #__recipe_print_container .stage-block { margin-bottom:14px; padding-left:14px; border-left:3px solid #C8312B; }
     #__recipe_print_container .stage-title { font-weight:800; font-size:12.5px; margin-bottom:5px; color:#1a1a1a; }
     #__recipe_print_container .stage-block ol { margin:0; padding-left:18px; }
     #__recipe_print_container .stage-block li { margin-bottom:4px; color:#333; }
-    #__recipe_print_container .step-time { color:#39a35e; font-weight:700; font-size:11px; }
+    #__recipe_print_container .step-time { color:#C8312B; font-weight:700; font-size:11px; }
     #__recipe_print_container .empty-note { color:#999; font-size:12px; font-style:italic; }
     #__recipe_print_container .footer-note { margin-top:34px; font-size:9px; color:#aaa; border-top:1px solid #eee; padding-top:10px; display:flex; justify-content:space-between; letter-spacing:0.3px; }
 
@@ -969,7 +975,7 @@ function printRecipe(recipe, ingredients, lang) {
   const closeBtn = document.createElement("button");
   closeBtn.textContent = lang==="en"?"✕ Close preview":"✕ Cerrar vista previa";
   closeBtn.id = "__recipe_print_close";
-  closeBtn.style.cssText = "position:fixed;top:16px;right:16px;background:#1a1a1a;color:#39ff6a;border:none;border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;z-index:100000;font-family:'DM Sans',sans-serif;font-weight:600;";
+  closeBtn.style.cssText = "position:fixed;top:16px;right:16px;background:#fff;color:#C8312B;border:1px solid #C8312B;border-radius:6px;padding:10px 16px;font-size:13px;cursor:pointer;z-index:100000;font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;font-weight:600;";
   closeBtn.onclick = () => { container.remove(); document.title = origTitle; };
   container.appendChild(closeBtn);
 
@@ -1086,7 +1092,7 @@ function Recipes() {
         {[["prep",lang==="en"?"🔪 Prep recipes":"🔪 Prep recipes"],["plate",lang==="en"?"🍽️ Dishes":"🍽️ Platillos"]].map(([id,label])=>(
           <button key={id} style={{background:recType===id?SURF:"transparent",color:recType===id?TEXT:TEXT2,border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:recType===id?600:400,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:6}} onClick={()=>{setRecType(id);setFC("all");}}>
             {label}
-            <span style={{fontSize:10,background:recType===id?"rgba(57,255,106,0.15)":"rgba(255,255,255,0.06)",color:recType===id?ACCENT:TEXT2,padding:"1px 6px",borderRadius:99}}>
+            <span style={{fontSize:10,background:recType===id?"rgba(200,49,43,0.10)":SURF2,color:recType===id?ACCENT:TEXT2,padding:"1px 6px",borderRadius:99}}>
               {recipes.filter(r=>(r.recipe_type||"plate")===id).length}
             </span>
           </button>
@@ -1277,7 +1283,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
           <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}>
             <label style={g.lbl}>{t("batch",lang)}</label>
             <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4}}>
-              <div style={{width:34,height:18,borderRadius:99,background:bm?"rgba(57,255,106,0.3)":BDR,cursor:"pointer",position:"relative"}} onClick={()=>setBM(v=>!v)}>
+              <div style={{width:34,height:18,borderRadius:99,background:bm?"rgba(200,49,43,0.20)":BDR,cursor:"pointer",position:"relative"}} onClick={()=>setBM(v=>!v)}>
                 <div style={{position:"absolute",top:2,left:bm?16:2,width:14,height:14,borderRadius:99,background:bm?ACCENT:TEXT2,transition:"all 0.2s"}}/>
               </div>
               <span style={{fontSize:11,color:bm?ACCENT:TEXT2}}>{bm?"ON":"OFF"}</span>
@@ -1285,7 +1291,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
           </div>
         </div>
         {/* Yield summary box */}
-        {r.total_yield&&parseFloat(r.total_yield)>0&&<div style={{background:"rgba(57,255,106,0.05)",border:"1px solid rgba(57,255,106,0.15)",borderRadius:8,padding:"10px 14px",fontSize:11,display:"flex",gap:20}}>
+        {r.total_yield&&parseFloat(r.total_yield)>0&&<div style={{background:"rgba(200,49,43,0.04)",border:"1px solid rgba(200,49,43,0.10)",borderRadius:8,padding:"10px 14px",fontSize:11,display:"flex",gap:20}}>
           <span style={{color:TEXT2}}>{lang==="en"?"Total yield:":"Rendimiento:"} <strong style={{color:ACCENT}}>{r.total_yield} {r.yield_unit||"L"}</strong></span>
           <span style={{color:TEXT2}}>{lang==="en"?"Portions:":"Porciones:"} <strong style={{color:ACCENT}}>{r.portions}</strong></span>
           <span style={{color:TEXT2}}>{lang==="en"?"Per portion:":"Por porción:"} <strong style={{color:ACCENT}}>{r.portion_size} {r.portion_unit}</strong></span>
@@ -1397,7 +1403,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
             </div>
           ))}
         </div>}
-        {c.total>0&&<div style={{background:"rgba(57,255,106,0.05)",border:"1px solid rgba(57,255,106,0.15)",borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
+        {c.total>0&&<div style={{background:"rgba(200,49,43,0.04)",border:"1px solid rgba(200,49,43,0.10)",borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
           <div style={{display:"flex",gap:6}}>
             {["price","margin"].map(m=>(
               <button key={m} style={{...(cm===m?g.btnP:{...g.btnS,color:TEXT2}),fontSize:11,padding:"5px 12px"}} onClick={()=>setCM(m)}>
@@ -1430,8 +1436,8 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
                   <div key={step.id} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"8px 14px",borderBottom:`1px solid ${BDR}`}}>
                     <div style={{width:22,height:22,borderRadius:"50%",background:`${stage.color}22`,color:stage.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,marginTop:4}}>{i+1}</div>
                     <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}>
-                      <textarea style={{background:"#111",border:`1px solid ${BDR}`,borderRadius:6,padding:"7px 10px",color:TEXT,fontSize:12,outline:"none",fontFamily:"inherit",resize:"vertical",minHeight:34}} placeholder={t("stepEsPlaceholder",lang)} value={step.text} onChange={e=>upStep(step.id,"text",e.target.value)}/>
-                      <textarea style={{background:"#111",border:`1px solid ${BDR}`,borderRadius:6,padding:"7px 10px",color:TEXT2,fontSize:12,outline:"none",fontFamily:"inherit",resize:"vertical",minHeight:34}} placeholder={t("stepEnPlaceholder",lang)} value={step.text_en||""} onChange={e=>upStep(step.id,"text_en",e.target.value)}/>
+                      <textarea style={{background:"#FBFBFB",border:`1px solid ${BDR}`,borderRadius:6,padding:"7px 10px",color:TEXT,fontSize:12,outline:"none",fontFamily:"inherit",resize:"vertical",minHeight:34}} placeholder={t("stepEsPlaceholder",lang)} value={step.text} onChange={e=>upStep(step.id,"text",e.target.value)}/>
+                      <textarea style={{background:"#FBFBFB",border:`1px solid ${BDR}`,borderRadius:6,padding:"7px 10px",color:TEXT2,fontSize:12,outline:"none",fontFamily:"inherit",resize:"vertical",minHeight:34}} placeholder={t("stepEnPlaceholder",lang)} value={step.text_en||""} onChange={e=>upStep(step.id,"text_en",e.target.value)}/>
                     </div>
                     <input style={{...g.inp,width:70,flexShrink:0}} placeholder="min" value={step.time} onChange={e=>upStep(step.id,"time",e.target.value)}/>
                     <button style={{...g.btnD,padding:"6px 9px",flexShrink:0}} onClick={()=>rmStep(step.id)}><i className="ti ti-trash"/></button>
@@ -1479,11 +1485,11 @@ function MonthAccordion({group, lang, selectedInv, setSelectedInv, removeInvoice
   const [open, setOpen] = useState(false);
   return (
     <div style={{borderBottom:`1px solid ${BDR}`}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",cursor:"pointer",background:open?"rgba(57,255,106,0.04)":"transparent"}} onClick={()=>setOpen(v=>!v)}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",cursor:"pointer",background:open?"rgba(200,49,43,0.03)":"transparent"}} onClick={()=>setOpen(v=>!v)}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <i className={`ti ${open?"ti-chevron-down":"ti-chevron-right"}`} style={{fontSize:12,color:ACCENT}}/>
           <span style={{fontSize:13,fontWeight:600}}>{group.label}</span>
-          <span style={{fontSize:11,color:"#888",background:"rgba(255,255,255,0.06)",padding:"2px 8px",borderRadius:99}}>{group.invoices.length} {lang==="en"?"invoices":"facturas"}</span>
+          <span style={{fontSize:11,color:TEXT2,background:SURF2,padding:"2px 8px",borderRadius:99}}>{group.invoices.length} {lang==="en"?"invoices":"facturas"}</span>
         </div>
         <span style={{fontSize:12,fontWeight:700,color:ACCENT}}>${group.total.toFixed(2)}</span>
       </div>
@@ -1514,7 +1520,7 @@ function MonthAccordion({group, lang, selectedInv, setSelectedInv, removeInvoice
                 </td>
               </tr>
               {selectedInv?.id===inv.id&&inv.line_items&&inv.line_items.length>0&&(
-                <tr><td colSpan={5} style={{padding:14,background:"rgba(57,255,106,0.03)"}}>
+                <tr><td colSpan={5} style={{padding:14,background:"rgba(200,49,43,0.02)"}}>
                   <div style={{fontSize:12,fontWeight:700,marginBottom:10,color:ACCENT}}>{inv.supplier} · {inv.date}</div>
                   <div style={{overflowX:"auto"}}>
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
@@ -1689,7 +1695,7 @@ function Invoices() {
 
       {activeTab==="upload"&&<>
         {st!=="review"&&st!=="saved"&&<>
-          <div style={{border:`2px dashed ${drag?ACCENT:BDR}`,borderRadius:12,padding:"36px 20px",textAlign:"center",cursor:"pointer",background:drag?"rgba(57,255,106,0.04)":SURF,display:"flex",flexDirection:"column",alignItems:"center",gap:10}}
+          <div style={{border:`2px dashed ${drag?ACCENT:BDR}`,borderRadius:12,padding:"36px 20px",textAlign:"center",cursor:"pointer",background:drag?"rgba(200,49,43,0.03)":SURF,display:"flex",flexDirection:"column",alignItems:"center",gap:10}}
             onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);hFile(e.dataTransfer.files[0]);}} onClick={()=>ref.current.click()}>
             <input ref={ref} type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>hFile(e.target.files[0])}/>
             <i className="ti ti-cloud-upload" style={{fontSize:40,color:ACCENT,opacity:0.8}}/>
@@ -1716,7 +1722,7 @@ function Invoices() {
             <span style={{fontSize:12,fontWeight:600}}><i className="ti ti-check" style={{marginRight:6,color:ACCENT}}/>{t("reviewItems",lang)} — {ext.length} {t("items",lang)}</span>
             <span style={g.badge("info")}>{ext[0]?.supplier}</span>
           </div>
-          <div style={{padding:"8px 14px",borderBottom:`1px solid ${BDR}`,background:"rgba(57,255,106,0.04)",fontSize:11,color:ACCENT}}>
+          <div style={{padding:"8px 14px",borderBottom:`1px solid ${BDR}`,background:"rgba(200,49,43,0.03)",fontSize:11,color:ACCENT}}>
             <i className="ti ti-info-circle" style={{marginRight:6}}/>{t("willBeAdded",lang)}
           </div>
           <div style={{overflowX:"auto"}}>
@@ -1736,7 +1742,7 @@ function Invoices() {
                   const costPerBase=packSize>0?(unitPrice/packSize).toFixed(3):null;
                   return (
                     <tr key={item.id}>
-                      <td style={g.td}><input style={{...g.inp,width:130}} value={item.name} onChange={e=>upd(item.id,"name",e.target.value)}/>{item.grouped&&<span style={{fontSize:9,background:"rgba(57,255,106,0.12)",color:ACCENT,padding:"1px 5px",borderRadius:99,marginLeft:5,fontWeight:700}}>{t("grouped",lang)}</span>}</td>
+                      <td style={g.td}><input style={{...g.inp,width:130}} value={item.name} onChange={e=>upd(item.id,"name",e.target.value)}/>{item.grouped&&<span style={{fontSize:9,background:"rgba(200,49,43,0.08)",color:ACCENT,padding:"1px 5px",borderRadius:99,marginLeft:5,fontWeight:700}}>{t("grouped",lang)}</span>}</td>
                       <td style={g.td}><select style={{...g.sel,width:100}} value={item.category||"otros"} onChange={e=>upd(item.id,"category",e.target.value)}>{CAT_ING.map(c=><option key={c.id} value={c.id}>{lang==="en"?c.label_en:c.label}</option>)}</select></td>
                       <td style={g.td}><input style={{...g.inp,width:55}} type="text" inputMode="decimal" value={item.qty} onChange={e=>upd(item.id,"qty",e.target.value)}/></td>
                       <td style={g.td}><select style={{...g.sel,width:78}} value={item.unit_purchase} onChange={e=>upd(item.id,"unit_purchase",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select></td>
@@ -2037,7 +2043,7 @@ function Shopping() {
   return (
     <div style={{padding:20,display:"flex",flexDirection:"column",gap:16}}>
       {todayOrder&&providerItems.length>0&&(
-        <div style={{background:"rgba(57,255,106,0.08)",border:`1px solid ${ACCENT}`,borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
+        <div style={{background:"rgba(200,49,43,0.06)",border:`1px solid ${ACCENT}`,borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
           <i className="ti ti-bell-ringing" style={{fontSize:18,color:ACCENT}}/>
           <div style={{flex:1}}>
             <div style={{fontSize:13,fontWeight:700,color:ACCENT}}>{lang==="en"?`Today is order day for ${mainSupplier}!`:`¡Hoy es día de pedido para ${mainSupplier}!`}</div>
@@ -2065,7 +2071,7 @@ function Shopping() {
       <div style={{display:"flex",gap:4,background:SURF2,borderRadius:10,padding:4,width:"fit-content"}}>
         {[["all",lang==="en"?"All":"Todo"],["provider",`📦 ${mainSupplier}`],["storerun",lang==="en"?"🛒 Store Run":"🛒 Store Run"]].map(([id,label])=>(
           <button key={id} style={{background:fGroup===id?SURF:"transparent",color:fGroup===id?TEXT:TEXT2,border:"none",borderRadius:8,padding:"7px 14px",fontSize:11,fontWeight:fGroup===id?600:400,cursor:"pointer"}} onClick={()=>setFGroup(id)}>
-            {label}{id==="provider"&&providerItems.length>0&&<span style={{marginLeft:5,fontSize:9,background:"rgba(57,255,106,0.2)",color:ACCENT,padding:"1px 5px",borderRadius:99}}>{providerItems.length}</span>}
+            {label}{id==="provider"&&providerItems.length>0&&<span style={{marginLeft:5,fontSize:9,background:"rgba(200,49,43,0.15)",color:ACCENT,padding:"1px 5px",borderRadius:99}}>{providerItems.length}</span>}
             {id==="storerun"&&storeRunItems.length>0&&<span style={{marginLeft:5,fontSize:9,background:"rgba(55,138,221,0.2)",color:"#378ADD",padding:"1px 5px",borderRadius:99}}>{storeRunItems.length}</span>}
           </button>
         ))}
@@ -2096,14 +2102,14 @@ function Shopping() {
           </div>
           {cat.items.map(item=>(
             <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:`1px solid ${BDR}`,opacity:item.checked?0.5:1}}>
-              <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${item.checked?ACCENT:BDR}`,background:item.checked?"rgba(57,255,106,0.15)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}} onClick={()=>toggle(item.id)}>
+              <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${item.checked?ACCENT:BDR}`,background:item.checked?"rgba(200,49,43,0.10)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}} onClick={()=>toggle(item.id)}>
                 {item.checked&&<i className="ti ti-check" style={{fontSize:11,color:ACCENT}}/>}
               </div>
               <div style={{flex:1,cursor:"pointer"}} onClick={()=>toggle(item.id)}>
                 <div style={{fontSize:13,fontWeight:500,textDecoration:item.checked?"line-through":"none"}}>{item.name}</div>
                 <div style={{display:"flex",gap:6,marginTop:2}}>
                   {item.auto&&<span style={g.badge("warn")}>{t("lowStock",lang)}</span>}
-                  {item.group==="provider"&&<span style={{fontSize:9,background:"rgba(57,255,106,0.15)",color:ACCENT,padding:"1px 6px",borderRadius:99,fontWeight:600}}>📦 {mainSupplier}</span>}
+                  {item.group==="provider"&&<span style={{fontSize:9,background:"rgba(200,49,43,0.10)",color:ACCENT,padding:"1px 6px",borderRadius:99,fontWeight:600}}>📦 {mainSupplier}</span>}
                   {item.group==="storerun"&&<span style={{fontSize:9,background:"rgba(55,138,221,0.15)",color:"#378ADD",padding:"1px 6px",borderRadius:99,fontWeight:600}}>🛒 Store Run</span>}
                   {item.note&&<span style={{fontSize:10,color:TEXT2,fontStyle:"italic"}}>"{item.note}"</span>}
                 </div>
@@ -2263,7 +2269,7 @@ function WasteLog() {
         {/* Type selector */}
         <div style={{display:"flex", gap:8}}>
           {[["ingredient", lang==="en"?"🥩 Ingredient":"🥩 Ingrediente"], ["recipe", lang==="en"?"🍽️ Dish":"🍽️ Plato"]].map(([id, label]) => (
-            <button key={id} style={{flex:1, padding:"10px 14px", borderRadius:10, border:`2px solid ${form.type===id?ACCENT:BDR}`, background:form.type===id?"rgba(57,255,106,0.07)":SURF2, color:form.type===id?ACCENT:TEXT2, cursor:"pointer", fontSize:12, fontWeight:form.type===id?700:400}} onClick={()=>setForm(x=>({...x, type:id, item_id:"", item_name:"", unit:""}))}>
+            <button key={id} style={{flex:1, padding:"10px 14px", borderRadius:10, border:`2px solid ${form.type===id?ACCENT:BDR}`, background:form.type===id?"rgba(200,49,43,0.05)":SURF2, color:form.type===id?ACCENT:TEXT2, cursor:"pointer", fontSize:12, fontWeight:form.type===id?700:400}} onClick={()=>setForm(x=>({...x, type:id, item_id:"", item_name:"", unit:""}))}>
               {label}
             </button>
           ))}
@@ -2356,7 +2362,7 @@ function WasteLog() {
                   <tr key={log.id} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                     <td style={g.td}>{new Date(log.logged_at).toLocaleDateString()}</td>
                     <td style={g.td}>
-                      <span style={{fontSize:10, background:log.type==="ingredient"?"rgba(57,255,106,0.1)":"rgba(55,138,221,0.1)", color:log.type==="ingredient"?ACCENT:"#378ADD", padding:"2px 8px", borderRadius:99, fontWeight:600}}>
+                      <span style={{fontSize:10, background:log.type==="ingredient"?"rgba(200,49,43,0.08)":"rgba(55,138,221,0.1)", color:log.type==="ingredient"?ACCENT:"#378ADD", padding:"2px 8px", borderRadius:99, fontWeight:600}}>
                         {log.type==="ingredient"?(lang==="en"?"Ingredient":"Ingrediente"):(lang==="en"?"Dish":"Plato")}
                       </span>
                     </td>
@@ -2492,7 +2498,7 @@ function ShoppingList() {
   return (
     <div style={{padding:20, display:"flex", flexDirection:"column", gap:14}}>
       {/* Submitted banner */}
-      {shoppingSubmitted&&<div style={{background:"rgba(57,255,106,0.08)",border:`1px solid ${ACCENT}`,borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+      {shoppingSubmitted&&<div style={{background:"rgba(200,49,43,0.06)",border:`1px solid ${ACCENT}`,borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
         <i className="ti ti-circle-check" style={{fontSize:20,color:ACCENT,flexShrink:0}}/>
         <div style={{flex:1}}>
           <div style={{fontSize:13,fontWeight:700,color:ACCENT}}>{lang==="en"?"List submitted!":"¡Lista enviada!"}</div>
@@ -2594,7 +2600,7 @@ function ShoppingList() {
             {supItems.map(item=>(
               <div key={item.id} style={{display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderBottom:`1px solid ${BDR}`, opacity:item.checked?0.5:1, transition:"opacity 0.2s"}}>
                 {/* Checkbox */}
-                <div style={{width:20, height:20, borderRadius:6, border:`2px solid ${item.checked?ACCENT:BDR}`, background:item.checked?"rgba(57,255,106,0.15)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0}} onClick={()=>toggle(item.id, item.checked)}>
+                <div style={{width:20, height:20, borderRadius:6, border:`2px solid ${item.checked?ACCENT:BDR}`, background:item.checked?"rgba(200,49,43,0.10)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0}} onClick={()=>toggle(item.id, item.checked)}>
                   {item.checked&&<i className="ti ti-check" style={{fontSize:11, color:ACCENT}}/>}
                 </div>
                 {/* Item info */}
@@ -2739,7 +2745,7 @@ function Settings() {
         <div style={{fontSize:13,fontWeight:600}}>{lang==="es"?"Idioma de la app":"App language"}</div>
         <div style={{display:"flex",gap:10}}>
           {["es","en"].map(l=>(
-            <button key={l} style={{flex:1,padding:14,borderRadius:10,border:`2px solid ${lang===l?ACCENT:BDR}`,background:lang===l?"rgba(57,255,106,0.07)":SURF2,color:lang===l?ACCENT:TEXT2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontWeight:lang===l?700:400,fontSize:12}} onClick={async()=>{setLang(l);const{error}=await supabase.from("app_settings").update({lang:l}).eq("id",1);if(error)console.error("Error guardando idioma:",error.message);}}>
+            <button key={l} style={{flex:1,padding:14,borderRadius:10,border:`2px solid ${lang===l?ACCENT:BDR}`,background:lang===l?"rgba(200,49,43,0.05)":SURF2,color:lang===l?ACCENT:TEXT2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontWeight:lang===l?700:400,fontSize:12}} onClick={async()=>{setLang(l);const{error}=await supabase.from("app_settings").update({lang:l}).eq("id",1);if(error)console.error("Error guardando idioma:",error.message);}}>
               <i className="ti ti-language" style={{fontSize:24,color:lang===l?ACCENT:TEXT2}}/>
               {l==="es"?"Español":"English"}
               {lang===l&&<span style={{fontSize:10}}>✓ {lang==="en"?"Active":"Activo"}</span>}
@@ -2794,19 +2800,83 @@ function UserModal({user:init,isNew,onSave,onClose,MODS,lang}) {
           {MODS.map(mod=>(
             <div key={mod.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}><i className={`ti ${mod.icon}`} style={{color:TEXT2,fontSize:13}}/>{mod.label}</div>
-              <select style={{background:f.permissions[mod.id]==="edit"?"rgba(57,255,106,0.1)":f.permissions[mod.id]==="view"?"rgba(55,138,221,0.1)":"rgba(255,255,255,0.04)",color:f.permissions[mod.id]==="edit"?ACCENT:f.permissions[mod.id]==="view"?"#378ADD":TEXT2,border:`1px solid ${f.permissions[mod.id]?"rgba(57,255,106,0.3)":"rgba(255,255,255,0.1)"}`,borderRadius:6,padding:"4px 8px",fontSize:11,cursor:"pointer",outline:"none",fontWeight:600}} value={f.permissions[mod.id]||"none"} onChange={e=>sp(mod.id,e.target.value==="none"?null:e.target.value)}>
+              <select style={{background:f.permissions[mod.id]==="edit"?"rgba(200,49,43,0.08)":f.permissions[mod.id]==="view"?"rgba(55,138,221,0.1)":SURF2,color:f.permissions[mod.id]==="edit"?ACCENT:f.permissions[mod.id]==="view"?"#378ADD":TEXT2,border:`1px solid ${f.permissions[mod.id]?"rgba(200,49,43,0.20)":BDR}`,borderRadius:6,padding:"4px 8px",fontSize:11,cursor:"pointer",outline:"none",fontWeight:600}} value={f.permissions[mod.id]||"none"} onChange={e=>sp(mod.id,e.target.value==="none"?null:e.target.value)}>
                 <option value="none">{t("noAccess",lang)}</option><option value="view">{t("viewOnly",lang)}</option><option value="edit">{t("viewEdit",lang)}</option>
               </select>
             </div>
           ))}
         </div>}
-        {f.role==="admin"&&<div style={{background:"rgba(57,255,106,0.06)",border:"1px solid rgba(57,255,106,0.2)",borderRadius:8,padding:"10px 14px",fontSize:12,color:ACCENT}}><i className="ti ti-shield-check" style={{marginRight:6}}/>{t("adminFullAccess",lang)}</div>}
+        {f.role==="admin"&&<div style={{background:"rgba(200,49,43,0.04)",border:"1px solid rgba(200,49,43,0.15)",borderRadius:8,padding:"10px 14px",fontSize:12,color:ACCENT}}><i className="ti ti-shield-check" style={{marginRight:6}}/>{t("adminFullAccess",lang)}</div>}
         <div style={{display:"flex",gap:10}}>
           <button style={{...g.btnP,flex:1,justifyContent:"center"}} onClick={save}><i className="ti ti-check"/>{t("save",lang)}</button>
           <button style={g.btnS} onClick={onClose}>{t("cancel",lang)}</button>
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── MOBILE BOTTOM NAV ────────────────────────────────────────────────────────
+const MOBILE_NAV_ITEMS = [
+  { id:"dashboard",   icon:"ti-layout-dashboard", es:"Inicio",     en:"Home" },
+  { id:"recipes",     icon:"ti-book",             es:"Recetas",    en:"Recipes" },
+  { id:"inventory",   icon:"ti-box",              es:"Inventario", en:"Inventory" },
+  { id:"invoices",    icon:"ti-receipt",          es:"Facturas",   en:"Invoices" },
+  { id:"__more__",    icon:"ti-dots",             es:"Más",        en:"More" },
+];
+const MORE_ITEMS = [
+  { id:"ingredients", icon:"ti-basket",       es:"Ingredientes", en:"Ingredients" },
+  { id:"wastelog",    icon:"ti-trash",        es:"Desperdicio",  en:"Waste Log" },
+  { id:"shopping",    icon:"ti-shopping-cart",es:"Compras",      en:"Shopping" },
+  { id:"settings",    icon:"ti-settings",     es:"Configuración",en:"Settings" },
+];
+
+function MobileBottomNav({ page, setPage, lang, pendingShopping }) {
+  const [showMore, setShowMore] = useState(false);
+  const isMorePage = MORE_ITEMS.some(i=>i.id===page);
+
+  function navTo(id) {
+    setPage(id);
+    setShowMore(false);
+  }
+
+  return (
+    <>
+      {/* More drawer */}
+      {showMore && (
+        <div style={{ position:"fixed", inset:0, zIndex:99 }} onClick={()=>setShowMore(false)}>
+          <div style={{ position:"fixed", bottom:56, left:0, right:0, background:SURF, borderTop:`1px solid ${BDR}`, padding:"8px 0", boxShadow:"0 -4px 20px rgba(0,0,0,0.1)", zIndex:100 }}
+            onClick={e=>e.stopPropagation()}>
+            {MORE_ITEMS.map(item=>{
+              const active = page===item.id;
+              return (
+                <div key={item.id} style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 20px", cursor:"pointer", background:active?"#F8E1DF":"transparent" }}
+                  onClick={()=>navTo(item.id)}>
+                  <i className={`ti ${item.icon}`} style={{ fontSize:18, color:active?ACCENT:TEXT2 }}/>
+                  <span style={{ fontSize:14, color:active?ACCENT:TEXT, fontWeight:active?600:400 }}>{lang==="es"?item.es:item.en}</span>
+                  {item.id==="shopping"&&pendingShopping>0&&<span style={{marginLeft:"auto",background:ACCENT,color:"#fff",fontSize:10,fontWeight:700,borderRadius:99,minWidth:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px"}}>{pendingShopping}</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {/* Bottom bar */}
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:SURF, borderTop:`1px solid ${BDR}`, display:"flex", zIndex:100, paddingBottom:"env(safe-area-inset-bottom)", height:56 }}>
+        {MOBILE_NAV_ITEMS.map(item=>{
+          const isMore = item.id==="__more__";
+          const active = isMore ? (showMore||isMorePage) : page===item.id;
+          return (
+            <div key={item.id} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"6px 2px", cursor:"pointer", background:active?"#F8E1DF":"transparent", position:"relative" }}
+              onClick={()=>{ if(isMore){ setShowMore(v=>!v); } else { setPage(item.id); setShowMore(false); } }}>
+              <i className={`ti ${item.icon}`} style={{ fontSize:19, color:active?ACCENT:TEXT2, marginBottom:2 }}/>
+              {item.id==="shopping"&&pendingShopping>0&&<span style={{position:"absolute",top:4,right:"calc(50% - 14px)",background:ACCENT,color:"#fff",fontSize:9,fontWeight:700,borderRadius:99,minWidth:16,height:16,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 4px"}}>{pendingShopping}</span>}
+              <span style={{ fontSize:9, fontWeight:active?600:400, color:active?ACCENT:TEXT2, textAlign:"center", lineHeight:1.2 }}>{lang==="es"?item.es:item.en}</span>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
@@ -2896,7 +2966,7 @@ export default function App() {
 
   if (dbLoading) {
     return (
-      <div style={{ minHeight:"100vh", background:BG, color:TEXT, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans',sans-serif" }}>
+      <div style={{ minHeight:"100vh", background:BG, color:TEXT, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Segoe UI Variable','Segoe UI',system-ui,sans-serif" }}>
         <div style={{ textAlign:"center" }}>
           <div style={{ width:32, height:32, border:`3px solid ${BDR}`, borderTop:`3px solid ${ACCENT}`, borderRadius:"50%", animation:"spin 0.8s linear infinite", margin:"0 auto 14px" }}/>
           <div style={{ fontSize:13, color:TEXT2 }}>Conectando con la base de datos...</div>
@@ -2908,7 +2978,7 @@ export default function App() {
 
   if (dbError) {
     return (
-      <div style={{ minHeight:"100vh", background:BG, color:TEXT, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans',sans-serif", padding:20 }}>
+      <div style={{ minHeight:"100vh", background:BG, color:TEXT, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Segoe UI Variable','Segoe UI',system-ui,sans-serif", padding:20 }}>
         <div style={{ textAlign:"center", maxWidth:400 }}>
           <i className="ti ti-alert-triangle" style={{ fontSize:36, color:"#E24B4A", display:"block", marginBottom:12 }}/>
           <div style={{ fontSize:14, fontWeight:700, marginBottom:6 }}>Error de conexión con la base de datos</div>
@@ -2921,50 +2991,61 @@ export default function App() {
   return (
     <AppCtx.Provider value={ctx}>
       <ToastProvider>
-      <div style={{ minHeight:"100vh", background:BG, color:TEXT, fontFamily:"'DM Sans',sans-serif" }}>
+      <div style={{ minHeight:"100vh", background:BG, color:TEXT, fontFamily:"'Segoe UI Variable','Segoe UI',system-ui,sans-serif" }}>
         <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
           @keyframes spin { to { transform:rotate(360deg); } }
           * { box-sizing:border-box; margin:0; padding:0; }
-          input:focus, select:focus { outline:1px solid #39ff6a55; border-color:#39ff6a55; }
-          button:hover { opacity:0.85; }
-          ::-webkit-scrollbar { width:4px; height:4px; }
+          body { background:${BG}; font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif; }
+          input:focus, select:focus, textarea:focus { outline:none; border-color:#8A8A8A !important; border-bottom-color:${ACCENT} !important; }
+          button:hover { opacity:0.88; }
+          ::-webkit-scrollbar { width:5px; height:5px; }
           ::-webkit-scrollbar-track { background:transparent; }
-          ::-webkit-scrollbar-thumb { background:#333; border-radius:99px; }
-          .mobile-card { background:${SURF}; border:1px solid ${BDR}; border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+          ::-webkit-scrollbar-thumb { background:${BDR}; border-radius:99px; }
+          ::-webkit-scrollbar-thumb:hover { background:#C0C0C0; }
+          .mobile-card { background:${SURF}; border:1px solid ${BDR}; border-radius:8px; padding:12px 14px; margin-bottom:8px; }
           .mobile-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
-          .mobile-label { font-size:10px; color:${TEXT2}; }
-          .mobile-value { font-size:12px; color:${TEXT}; font-weight:500; }
+          .mobile-label { font-size:11px; color:${TEXT2}; }
+          .mobile-value { font-size:13px; color:${TEXT}; font-weight:500; }
+          table { border-collapse:collapse; }
+          @media (max-width:768px) { .hide-mobile { display:none !important; } }
         `}</style>
 
         {!currentUser ? <Login/> : (
           <div style={{ display:"flex", minHeight:"100vh", flexDirection:isMobile?"column":"row" }}>
 
             {/* DESKTOP Sidebar */}
-            {!isMobile && <div style={{ width:200, background:SURF, borderRight:`1px solid ${BDR}`, display:"flex", flexDirection:"column", flexShrink:0, position:"sticky", top:0, height:"100vh", overflowY:"auto" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:10, padding:"16px 16px", borderBottom:`1px solid ${BDR}` }}>
-                <img src={ICON_URL} alt="ChefCost" style={{ width:34, height:34, objectFit:"contain", display:"block", filter:"drop-shadow(0 0 4px rgba(57,255,106,0.7)) drop-shadow(0 0 10px rgba(57,255,106,0.35))", flexShrink:0 }}/>
-                <div style={{ lineHeight:1.15 }}>
-                  <div style={{ fontSize:14, fontWeight:800, color:ACCENT, letterSpacing:0.5 }}>CHEFCOST</div>
-                  <div style={{ fontSize:8, color:TEXT2, letterSpacing:1, marginTop:1 }}>FOOD COST MANAGER</div>
+            {!isMobile && <div style={{ width:232, background:SURF, borderRight:`1px solid ${BDR}`, display:"flex", flexDirection:"column", flexShrink:0, position:"sticky", top:0, height:"100vh", overflowY:"auto" }}>
+              {/* Logo area */}
+              <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", borderBottom:`1px solid ${BDR}` }}>
+                <div style={{ width:36, height:36, background:ACCENT, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <span style={{ fontSize:15, fontWeight:800, color:"#fff", letterSpacing:-0.5 }}>CC</span>
+                </div>
+                <div style={{ lineHeight:1.2, minWidth:0 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:TEXT }}>ChefCost</div>
+                  <div style={{ fontSize:10, color:TEXT2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Patty Hustle</div>
                 </div>
               </div>
-              <div style={{ padding:"8px 0", flex:1 }}>
-                {visibleNav.map(item => (
-                  <div key={item.id}
-                    style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", fontSize:12, color:page===item.id?ACCENT:TEXT2, cursor:"pointer", borderLeft:`2px solid ${page===item.id?ACCENT:"transparent"}`, background:page===item.id?"rgba(57,255,106,0.05)":"transparent", position:"relative" }}
-                    onClick={() => setPage(item.id)}>
-                    <i className={`ti ${item.icon}`} style={{ fontSize:15 }}/>
-                    {lang==="es" ? item.es : item.en}
-                    {item.id==="shopping"&&pendingShopping>0&&<span style={{marginLeft:"auto",background:"#E24B4A",color:"#fff",fontSize:9,fontWeight:700,borderRadius:99,minWidth:16,height:16,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 4px"}}>{pendingShopping}</span>}
-                  </div>
-                ))}
+              {/* Nav items */}
+              <div style={{ padding:"6px 0", flex:1 }}>
+                {visibleNav.map(item => {
+                  const active = page===item.id;
+                  return (
+                    <div key={item.id}
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 16px", fontSize:13, color:active?TEXT:TEXT2, cursor:"pointer", borderLeft:`3px solid ${active?ACCENT:"transparent"}`, background:active?"#F3F3F3":"transparent", position:"relative", transition:"background 0.1s" }}
+                      onClick={() => setPage(item.id)}>
+                      <i className={`ti ${item.icon}`} style={{ fontSize:16, color:active?ACCENT:TEXT2 }}/>
+                      {lang==="es" ? item.es : item.en}
+                      {item.id==="shopping"&&pendingShopping>0&&<span style={{marginLeft:"auto",background:ACCENT,color:"#fff",fontSize:9,fontWeight:700,borderRadius:99,minWidth:16,height:16,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 4px"}}>{pendingShopping}</span>}
+                    </div>
+                  );
+                })}
               </div>
+              {/* User footer */}
               <div style={{ padding:"10px 14px", borderTop:`1px solid ${BDR}`, display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={()=>setPage("settings")}>
                 <div style={g.avt(ROLE_COLORS[currentUser.role]||TEXT2)}>{currentUser.avatar}</div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:11, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{currentUser.name}</div>
-                  <span style={{ fontSize:9, background:`${ROLE_COLORS[currentUser.role]}22`, color:ROLE_COLORS[currentUser.role], padding:"1px 6px", borderRadius:99, fontWeight:700 }}>{currentUser.role}</span>
+                  <div style={{ fontSize:12, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:TEXT }}>{currentUser.name}</div>
+                  <span style={{ fontSize:10, background:`${ROLE_COLORS[currentUser.role]}15`, color:ROLE_COLORS[currentUser.role], padding:"1px 6px", borderRadius:4, fontWeight:600 }}>{currentUser.role}</span>
                 </div>
               </div>
             </div>}
@@ -2972,21 +3053,25 @@ export default function App() {
             {/* Main content */}
             <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, paddingBottom:isMobile?70:0 }}>
               {/* Header */}
-              <div style={{ padding:isMobile?"10px 16px":"13px 22px", borderBottom:`1px solid ${BDR}`, display:"flex", alignItems:"center", justifyContent:"space-between", background:SURF, position:"sticky", top:0, zIndex:10 }}>
-                {isMobile&&<img src={ICON_URL} alt="CC" style={{ width:24, height:24, objectFit:"contain", filter:"drop-shadow(0 0 4px rgba(57,255,106,0.7))" }}/>}
-                <span style={{ fontSize:isMobile?13:15, fontWeight:600 }}>
+              <div style={{ padding:isMobile?"10px 16px":"11px 22px", borderBottom:`1px solid ${BDR}`, display:"flex", alignItems:"center", gap:12, background:SURF, position:"sticky", top:0, zIndex:10 }}>
+                {isMobile&&(
+                  <div style={{ width:30, height:30, background:ACCENT, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    <span style={{ fontSize:12, fontWeight:800, color:"#fff" }}>CC</span>
+                  </div>
+                )}
+                <span style={{ fontSize:isMobile?14:15, fontWeight:600, color:TEXT, flex:1 }}>
                   {page==="settings" ? (lang==="es"?"Configuración":"Settings") : visibleNav.find(n=>n.id===page)?.[lang==="es"?"es":"en"] || ""}
                 </span>
-                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   {page!=="settings" && !canEdit(page) && canAccess(page) && (
-                    <span style={{ fontSize:10, color:"#378ADD", background:"rgba(55,138,221,0.1)", padding:"3px 8px", borderRadius:99, fontWeight:600 }}>
+                    <span style={{ fontSize:10, color:"#378ADD", background:"rgba(55,138,221,0.08)", padding:"3px 8px", borderRadius:4, fontWeight:600 }}>
                       <i className="ti ti-eye" style={{ marginRight:4 }}/>Solo lectura
                     </span>
                   )}
                   {!isMobile&&<span style={{ fontSize:11, color:TEXT2 }}>
                     <i className="ti ti-calendar" style={{ fontSize:12, verticalAlign:-1, marginRight:4 }}/>{new Date().toLocaleDateString(lang==="es"?"es-ES":"en-US",{month:"long",year:"numeric"})}
                   </span>}
-                  {isMobile&&<div style={{ width:28, height:28, borderRadius:"50%", background:`${ROLE_COLORS[currentUser.role]}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:ROLE_COLORS[currentUser.role], cursor:"pointer" }} onClick={()=>setPage("settings")}>{currentUser.avatar}</div>}
+                  {isMobile&&<div style={{ width:32, height:32, borderRadius:"50%", background:`${ROLE_COLORS[currentUser.role]}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:ROLE_COLORS[currentUser.role], cursor:"pointer", border:`1px solid ${ROLE_COLORS[currentUser.role]}30` }} onClick={()=>setPage("settings")}>{currentUser.avatar}</div>}
                 </div>
               </div>
 
@@ -3004,15 +3089,7 @@ export default function App() {
             </div>
 
             {/* MOBILE Bottom Navigation */}
-            {isMobile&&<div style={{ position:"fixed", bottom:0, left:0, right:0, background:SURF, borderTop:`1px solid ${BDR}`, display:"flex", zIndex:100, paddingBottom:"env(safe-area-inset-bottom)" }}>
-              {visibleNav.map(item=>(
-                <div key={item.id} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"8px 4px", cursor:"pointer", color:page===item.id?ACCENT:TEXT2, background:page===item.id?"rgba(57,255,106,0.05)":"transparent", borderTop:`2px solid ${page===item.id?ACCENT:"transparent"}`, position:"relative" }} onClick={()=>setPage(item.id)}>
-                  <i className={`ti ${item.icon}`} style={{ fontSize:18, marginBottom:2 }}/>
-                  {item.id==="shopping"&&pendingShopping>0&&<span style={{position:"absolute",top:4,right:"calc(50% - 14px)",background:"#E24B4A",color:"#fff",fontSize:9,fontWeight:700,borderRadius:99,minWidth:16,height:16,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 4px"}}>{pendingShopping}</span>}
-                  <span style={{ fontSize:9, fontWeight:page===item.id?600:400, textAlign:"center", lineHeight:1.2 }}>{lang==="es"?item.es:item.en}</span>
-                </div>
-              ))}
-            </div>}
+            {isMobile&&<MobileBottomNav page={page} setPage={setPage} lang={lang} pendingShopping={pendingShopping}/>}
 
           </div>
         )}
