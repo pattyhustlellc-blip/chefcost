@@ -717,7 +717,7 @@ function Dashboard() {
 
 // ─── INGREDIENTS ─────────────────────────────────────────────────────────────
 function Ingredients() {
-  const { ingredients, setIngredients, lang } = useApp();
+  const { ingredients, setIngredients, lang, currentUser } = useApp();
   const [search, setSrc] = useState("");
   const [fCat,   setFC]  = useState("all");
   const [fSup,   setFS]  = useState("all");
@@ -803,8 +803,9 @@ function Ingredients() {
   }
 
   async function save(u) {
+    const rid = currentUser?.restaurant_id;
     const isExisting = ingredients.some(i=>i.id===u.id);
-    const clean = { ...u, price:parseFloat(u.price)||0, prev_price:parseFloat(u.prev_price)||0, pack_size:u.pack_size?parseFloat(u.pack_size):null, stock:parseFloat(u.stock)||0, min_stock:parseFloat(u.min_stock)||5 };
+    const clean = { ...u, restaurant_id: rid, price:parseFloat(u.price)||0, prev_price:parseFloat(u.prev_price)||0, pack_size:u.pack_size?parseFloat(u.pack_size):null, stock:parseFloat(u.stock)||0, min_stock:parseFloat(u.min_stock)||5 };
     if (isExisting) {
       const { id, ...updateFields } = clean;
       const { error } = await supabase.from("ingredients").update(updateFields).eq("id", id);
@@ -1159,7 +1160,7 @@ function printRecipe(recipe, ingredients, lang) {
 }
 
 function Recipes() {
-  const { ingredients, recipes, setRecipes, lang } = useApp();
+  const { ingredients, recipes, setRecipes, lang, currentUser } = useApp();
   const [cats,    setCats] = useState(DEFAULT_RECIPE_CATS);
   const [edit,    setEd]   = useState(null);
   const [addNew,  setAN]   = useState(false);
@@ -1195,9 +1196,11 @@ function Recipes() {
   if (uncatItems.length > 0) grouped.push({id:"__uncat",label:lang==="en"?"Uncategorized":"Sin categoría",label_en:"Uncategorized",color:TEXT2,items:uncatItems});
 
   async function save(u) {
+    const rid = currentUser?.restaurant_id;
     const isExisting = recipes.some(r=>r.id===u.id);
     const clean = {
       ...u,
+      restaurant_id: rid,
       portions: parseFloat(u.portions)||1,
       portion_size: u.portion_size?parseFloat(u.portion_size):null,
       waste_pct: parseFloat(u.waste_pct)||0,
@@ -1226,10 +1229,11 @@ function Recipes() {
     setRecipes(p=>p.filter(r=>r.id!==id));
   }
   async function addCat(label, labelEn) {
+    const rid = currentUser?.restaurant_id;
     const id = label.toLowerCase().replace(/\s+/g,"-");
     if (!cats.find(c=>c.id===id)) {
       const colors=["#EF9F27","#C084FC","#38BDF8",ACCENT,"#E24B4A","#378ADD","#F472B6","#34D399"];
-      const newCat = {id, label, label_en: labelEn||label, color:colors[cats.length%colors.length]};
+      const newCat = {id, label, label_en: labelEn||label, color:colors[cats.length%colors.length], restaurant_id: rid};
       const { error } = await supabase.from("recipe_categories").upsert(newCat);
       if (error) { console.error("Error guardando categoría:", error.message); }
       setCats(p=>[...p,newCat]);
@@ -1726,7 +1730,7 @@ function MonthAccordion({group, lang, selectedInv, setSelectedInv, removeInvoice
 }
 
 function Invoices() {
-  const { invoices, setInvoices, ingredients, setIngredients, lang } = useApp();
+  const { invoices, setInvoices, ingredients, setIngredients, lang, currentUser } = useApp();
   const [activeTab, setActiveTab] = useState("upload");
   const [drag,setDrag]=useState(false);
   const [file,setFile]=useState(null);
@@ -1772,11 +1776,12 @@ function Invoices() {
   }
 
   async function confirmInvoice(itemsToConfirm, supplierName, invoiceDate){
+    const rid = currentUser?.restaurant_id;
     const supplier = supplierName || itemsToConfirm[0]?.supplier || "Desconocido";
     const total = "$"+itemsToConfirm.reduce((s,i)=>s+(parseFloat(i.total)||0),0).toFixed(2);
     const { data: invData, error: invError } = await supabase.from("invoices").insert({
       date: fixDate(invoiceDate || itemsToConfirm[0]?.date || new Date().toISOString().split("T")[0]),
-      supplier, items: itemsToConfirm.length, total, line_items: itemsToConfirm,
+      supplier, items: itemsToConfirm.length, total, line_items: itemsToConfirm, restaurant_id: rid,
     }).select().single();
     if (invError) { alert("Error guardando factura: "+invError.message); return; }
     setInvoices(p=>[invData, ...p].sort((a,b)=>new Date(b.date)-new Date(a.date)));
@@ -1791,7 +1796,7 @@ function Invoices() {
         const { error } = await supabase.from("ingredients").update(updateFields).eq("id", ex.id);
         if (!error) { const idx=updatedIngredients.findIndex(i=>i.id===ex.id); updatedIngredients[idx]={...ex,...updateFields}; }
       } else {
-        const insertFields = { name:item.name, category:item.category||"otros", supplier:item.supplier||supplier, unit_purchase:item.unit_purchase, unit_use:item.unit_use, unit_inventory:item.unit_inventory, price:parseFloat(item.unit_price)||0, prev_price:parseFloat(item.unit_price)||0, pack_size:item.pack_size?parseFloat(item.pack_size):null, stock:unitsReceived, min_stock:5 };
+        const insertFields = { name:item.name, category:item.category||"otros", supplier:item.supplier||supplier, unit_purchase:item.unit_purchase, unit_use:item.unit_use, unit_inventory:item.unit_inventory, price:parseFloat(item.unit_price)||0, prev_price:parseFloat(item.unit_price)||0, pack_size:item.pack_size?parseFloat(item.pack_size):null, stock:unitsReceived, min_stock:5, restaurant_id: rid };
         const { data, error } = await supabase.from("ingredients").insert(insertFields).select().single();
         if (!error && data) updatedIngredients.push(data);
       }
@@ -2026,7 +2031,7 @@ function Invoices() {
 
 
 function Inventory() {
-  const { ingredients, setIngredients, lang } = useApp();
+  const { ingredients, setIngredients, lang, currentUser } = useApp();
   const [mode,setMode]=useState("view");
   const [counts,setCounts]=useState({});
   const [saved,setSaved]=useState(null);
@@ -2035,7 +2040,8 @@ function Inventory() {
 
   useEffect(() => {
     async function loadHistory() {
-      const { data, error } = await supabase.from("inventory_counts").select("*").order("count_date", { ascending: false }).limit(10);
+      const rid = currentUser?.restaurant_id;
+      const { data, error } = await supabase.from("inventory_counts").select("*").eq("restaurant_id", rid).order("count_date", { ascending: false }).limit(10);
       if (!error && data && data.length > 0) {
         setHistory(data.map(d => ({ date: new Date(d.count_date).toLocaleDateString(), totalVal: d.total_value })));
         setSaved(data[0].counts);
@@ -2063,7 +2069,7 @@ function Inventory() {
 
     // Save count snapshot to Supabase
     const { error: countError } = await supabase.from("inventory_counts").insert({
-      total_value: newTotalVal, counts: snap
+      total_value: newTotalVal, counts: snap, restaurant_id: currentUser?.restaurant_id
     });
     if (countError) { alert("Error guardando conteo: "+countError.message); return; }
     setHistory(p=>[{date:new Date().toLocaleDateString(),totalVal:newTotalVal},...p]);
@@ -2324,7 +2330,7 @@ function translateReason(reason, toLang) {
 }
 
 function WasteLog() {
-  const { ingredients, recipes, lang } = useApp();
+  const { ingredients, recipes, lang, currentUser } = useApp();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -2335,7 +2341,8 @@ function WasteLog() {
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase.from("waste_log").select("*").order("logged_at", { ascending: false });
+      const rid = currentUser?.restaurant_id;
+      const { data, error } = await supabase.from("waste_log").select("*").eq("restaurant_id", rid).order("logged_at", { ascending: false });
       if (!error && data) setLogs(data);
       setLoading(false);
     }
@@ -2371,6 +2378,7 @@ function WasteLog() {
       reason: form.reason,
       cost,
       notes: form.notes,
+      restaurant_id: currentUser?.restaurant_id,
     };
     const { data, error } = await supabase.from("waste_log").insert(entry).select().single();
     if (error) { alert("Error guardando: " + error.message); return; }
@@ -2571,7 +2579,8 @@ function ShoppingList() {
 
   useEffect(()=>{
     async function load() {
-      const { data, error } = await supabase.from("shopping_list").select("*").order("supplier").order("created_at");
+      const rid = currentUser?.restaurant_id;
+      const { data, error } = await supabase.from("shopping_list").select("*").eq("restaurant_id", rid).order("supplier").order("created_at");
       if (!error && data) {
         setItems(data);
         setPendingShopping(data.filter(i=>!i.checked).length);
@@ -2583,6 +2592,7 @@ function ShoppingList() {
   },[]);
 
   async function addItem() {
+    const rid = currentUser?.restaurant_id;
     const finalName = form.name==="__custom" ? (form.customName||"").trim() : form.name.trim();
     if (!finalName) return;
     const { data, error } = await supabase.from("shopping_list").insert({
@@ -2591,6 +2601,7 @@ function ShoppingList() {
       unit: form.unit,
       supplier: form.supplier || (lang==="en"?"Other":"Otro"),
       checked: false,
+      restaurant_id: rid,
     }).select().single();
     if (error) { alert("Error: "+error.message); return; }
     setItems(p=>{
@@ -2634,12 +2645,13 @@ function ShoppingList() {
 
   async function submitList() {
     if (items.length===0) { showToast(lang==="en"?"Add items first":"Agrega ítems primero","error"); return; }
+    const rid = currentUser?.restaurant_id;
     const name = currentUser?.name || "Alguien";
     const { error } = await supabase.from("app_settings").update({
       shopping_submitted: true,
       shopping_submitted_by: name,
       shopping_submitted_at: new Date().toISOString(),
-    }).eq("id", 1);
+    }).eq("restaurant_id", rid);
     if (error) { showToast("Error: "+error.message, "error"); return; }
     setShoppingSubmitted(true);
     setShoppingSubmittedBy(name);
@@ -2647,11 +2659,12 @@ function ShoppingList() {
   }
 
   async function resetList() {
+    const rid = currentUser?.restaurant_id;
     const { error } = await supabase.from("app_settings").update({
       shopping_submitted: false,
       shopping_submitted_by: "",
       shopping_submitted_at: null,
-    }).eq("id", 1);
+    }).eq("restaurant_id", rid);
     if (error) return;
     setShoppingSubmitted(false);
     setShoppingSubmittedBy("");
@@ -2795,11 +2808,12 @@ function ShoppingList() {
 }
 
 function Settings() {
-  const { currentUser, setUser, users, setUsers, lang, setLang, mainSupplier, setMainSupplier, orderDays, setOrderDays, ingredients } = useApp();
+  const { currentUser, setUser, users, setUsers, lang, setLang, mainSupplier, setMainSupplier, orderDays, setOrderDays, ingredients, restaurantName } = useApp();
   const [tab,setTab]=useState("account");
   const [editU,setEd]=useState(null);
   const [addNew,setAN]=useState(false);
   async function saveUser(u){
+    const rid = currentUser?.restaurant_id;
     const isExisting = users.some(x=>x.id===u.id);
     if (isExisting) {
       const { id, ...updateFields } = u;
@@ -2807,7 +2821,7 @@ function Settings() {
       if (error) { alert("Error guardando usuario: "+error.message); return; }
       setUsers(p=>p.map(x=>x.id===u.id?u:x));
     } else {
-      const { id, ...insertFields } = u;
+      const { id, ...insertFields } = { ...u, restaurant_id: rid };
       const { data, error } = await supabase.from("app_users").insert(insertFields).select().single();
       if (error) { alert("Error creando usuario: "+error.message); return; }
       setUsers(p=>[...p,data]);
@@ -2831,12 +2845,14 @@ function Settings() {
   const suppliers=[...new Set(ingredients.map(i=>i.supplier).filter(Boolean))];
   async function updateMainSupplier(val){
     setMainSupplier(val);
-    const { error } = await supabase.from("app_settings").update({ main_supplier: val }).eq("id", 1);
+    const rid = currentUser?.restaurant_id;
+    const { error } = await supabase.from("app_settings").update({ main_supplier: val }).eq("restaurant_id", rid);
     if (error) console.error("Error guardando proveedor principal:", error.message);
   }
   async function saveOrderDays(newDays){
     setOrderDays(newDays);
-    const { error } = await supabase.from("app_settings").update({ order_days: newDays }).eq("id", 1);
+    const rid = currentUser?.restaurant_id;
+    const { error } = await supabase.from("app_settings").update({ order_days: newDays }).eq("restaurant_id", rid);
     if (error) console.error("Error guardando días de pedido:", error.message);
   }
   function addOrderDay(){saveOrderDays([...orderDays,{order:"lunes",deliver:"martes"}]);}
@@ -2918,7 +2934,7 @@ function Settings() {
         <div style={{fontSize:13,fontWeight:600}}>{lang==="es"?"Idioma de la app":"App language"}</div>
         <div style={{display:"flex",gap:10}}>
           {["es","en"].map(l=>(
-            <button key={l} style={{flex:1,padding:14,borderRadius:10,border:`2px solid ${lang===l?ACCENT:BDR}`,background:lang===l?"rgba(200,49,43,0.05)":SURF2,color:lang===l?ACCENT:TEXT2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontWeight:lang===l?700:400,fontSize:12}} onClick={async()=>{setLang(l);const{error}=await supabase.from("app_settings").update({lang:l}).eq("id",1);if(error)console.error("Error guardando idioma:",error.message);}}>
+            <button key={l} style={{flex:1,padding:14,borderRadius:10,border:`2px solid ${lang===l?ACCENT:BDR}`,background:lang===l?"rgba(200,49,43,0.05)":SURF2,color:lang===l?ACCENT:TEXT2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontWeight:lang===l?700:400,fontSize:12}} onClick={async()=>{setLang(l);const rid=currentUser?.restaurant_id;const{error}=await supabase.from("app_settings").update({lang:l}).eq("restaurant_id",rid);if(error)console.error("Error guardando idioma:",error.message);}}>
               <i className="ti ti-language" style={{fontSize:24,color:lang===l?ACCENT:TEXT2}}/>
               {l==="es"?"Español":"English"}
               {lang===l&&<span style={{fontSize:10}}>✓ {lang==="en"?"Active":"Activo"}</span>}
@@ -3089,6 +3105,7 @@ export default function App() {
   const [pendingShopping, setPendingShopping] = useState(0);
   const [shoppingSubmitted, setShoppingSubmitted] = useState(false);
   const [shoppingSubmittedBy, setShoppingSubmittedBy] = useState("");
+  const [restaurantName, setRestaurantName] = useState("");
   const [page,        setPage]        = useState("dashboard");
   const [dbLoading,   setDbLoading]   = useState(true);
   const [dbError,     setDbError]     = useState(null);
@@ -3097,14 +3114,16 @@ export default function App() {
   useEffect(() => {
     async function loadAll() {
       try {
+        const rid = currentUser?.restaurant_id;
+        if (!rid) throw new Error("User has no restaurant assigned.");
         const [ingRes, recRes, invRes, usrRes, setRes] = await Promise.all([
-          supabase.from("ingredients").select("*").order("id"),
-          supabase.from("recipes").select("*").order("id"),
-          supabase.from("invoices").select("*").order("date", { ascending: false }),
-          supabase.from("app_users").select("*").order("id"),
-          supabase.from("app_settings").select("*").eq("id", 1).single(),
+          supabase.from("ingredients").select("*").eq("restaurant_id", rid).order("id"),
+          supabase.from("recipes").select("*").eq("restaurant_id", rid).order("id"),
+          supabase.from("invoices").select("*").eq("restaurant_id", rid).order("date", { ascending: false }),
+          supabase.from("app_users").select("*").eq("restaurant_id", rid).order("id"),
+          supabase.from("app_settings").select("*").eq("restaurant_id", rid).single(),
         ]);
-        const shopRes = await supabase.from("shopping_list").select("id").eq("checked", false);
+        const shopRes = await supabase.from("shopping_list").select("id").eq("restaurant_id", rid).eq("checked", false);
         if (ingRes.error) throw ingRes.error;
         if (recRes.error) throw recRes.error;
         if (invRes.error) throw invRes.error;
@@ -3120,7 +3139,7 @@ export default function App() {
         setInvoices(invRes.data || []);
         setUsers(usrRes.data || []);
         if (setRes.data) {
-          setLang(setRes.data.lang || "es");
+          setLang(setRes.data.lang || "en");
           setMainSupplier(setRes.data.main_supplier || "Restaurant Depot");
           setOrderDays(setRes.data.order_days || []);
         }
@@ -3128,10 +3147,15 @@ export default function App() {
           setPendingShopping(shopRes.data.length);
         }
         // Load shopping submitted state
-        const subRes = await supabase.from("app_settings").select("shopping_submitted,shopping_submitted_by").eq("id",1).single();
+        const subRes = await supabase.from("app_settings").select("shopping_submitted,shopping_submitted_by").eq("restaurant_id", rid).single();
         if (!subRes.error && subRes.data) {
           setShoppingSubmitted(subRes.data.shopping_submitted||false);
           setShoppingSubmittedBy(subRes.data.shopping_submitted_by||"");
+        }
+        // Load restaurant name
+        const restRes = await supabase.from("restaurants").select("name").eq("id", rid).single();
+        if (!restRes.error && restRes.data) {
+          setRestaurantName(restRes.data.name || "");
         }
       } catch (e) {
         setDbError(e.message || String(e));
@@ -3145,7 +3169,7 @@ export default function App() {
   const canAccess = (id) => !currentUser ? false : currentUser.role==="admin" ? true : !!currentUser.permissions[id];
   const canEdit   = (id) => !currentUser ? false : currentUser.role==="admin" ? true : currentUser.permissions[id]==="edit";
 
-  const ctx = { currentUser, setUser, users, setUsers, ingredients, setIngredients, recipes, setRecipes, invoices, setInvoices, lang, setLang, mainSupplier, setMainSupplier, orderDays, setOrderDays, pendingShopping, setPendingShopping, setPage, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy };
+  const ctx = { currentUser, setUser, users, setUsers, ingredients, setIngredients, recipes, setRecipes, invoices, setInvoices, lang, setLang, mainSupplier, setMainSupplier, orderDays, setOrderDays, pendingShopping, setPendingShopping, setPage, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, restaurantName };
 
   const PAGES = { dashboard:<Dashboard/>, ingredients:<Ingredients/>, recipes:<Recipes/>, invoices:<Invoices/>, inventory:<Inventory/>, wastelog:<WasteLog/>, shopping:<ShoppingList/>, settings:<Settings/> };
   const visibleNav = [...NAV.filter(n=>canAccess(n.id)), { id:"settings", icon:"ti-settings", es:"Configuración", en:"Settings" }];
@@ -3208,7 +3232,7 @@ export default function App() {
                 </div>
                 <div style={{ lineHeight:1.2, minWidth:0 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:TEXT }}>ChefCost</div>
-                  <div style={{ fontSize:10, color:TEXT2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Patty Hustle</div>
+                  <div style={{ fontSize:10, color:TEXT2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{restaurantName || "ChefCost"}</div>
                 </div>
               </div>
               {/* Nav items */}
