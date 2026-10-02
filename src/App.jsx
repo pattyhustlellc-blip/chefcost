@@ -1,4 +1,5 @@
-// @version 2.1 - unit conversion fix
+// @version 2.2 - Phase 1 redesign: Windows 11 light theme
+/* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect, createContext, useContext } from "react";
 // @ts-ignore
 import { createClient } from "@supabase/supabase-js";
