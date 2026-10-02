@@ -3021,8 +3021,8 @@ export default function App() {
             {!isMobile && <div style={{ width:232, background:SURF, borderRight:`1px solid ${BDR}`, display:"flex", flexDirection:"column", flexShrink:0, position:"sticky", top:0, height:"100vh", overflowY:"auto" }}>
               {/* Logo area */}
               <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", borderBottom:`1px solid ${BDR}` }}>
-                <div style={{ width:36, height:36, background:ACCENT, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, overflow:"hidden", padding:4 }}>
-                  <img src="/knives-logo.png" alt="CC" style={{ width:"100%", height:"100%", objectFit:"contain", filter:"brightness(0) invert(1)" }}/>
+                <div style={{ width:36, height:36, flexShrink:0 }}>
+                  <img src="/knives-logo.png" alt="CC" style={{ width:"100%", height:"100%", objectFit:"contain" }}/>
                 </div>
                 <div style={{ lineHeight:1.2, minWidth:0 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:TEXT }}>ChefCost</div>
@@ -3059,8 +3059,8 @@ export default function App() {
               {/* Header */}
               <div style={{ padding:isMobile?"10px 16px":"11px 22px", borderBottom:`1px solid ${BDR}`, display:"flex", alignItems:"center", gap:12, background:SURF, position:"sticky", top:0, zIndex:10 }}>
                 {isMobile&&(
-                  <div style={{ width:30, height:30, background:ACCENT, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, overflow:"hidden", padding:3 }}>
-                    <img src="/knives-logo.png" alt="CC" style={{ width:"100%", height:"100%", objectFit:"contain", filter:"brightness(0) invert(1)" }}/>
+                  <div style={{ width:30, height:30, flexShrink:0 }}>
+                    <img src="/knives-logo.png" alt="CC" style={{ width:"100%", height:"100%", objectFit:"contain" }}/>
                   </div>
                 )}
                 <span style={{ fontSize:isMobile?14:15, fontWeight:600, color:TEXT, flex:1 }}>
