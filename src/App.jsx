@@ -1437,17 +1437,30 @@ function IngModal({ item, onSave, onClose, isNew, lang }) {
 }
 
 // ─── RECIPES ─────────────────────────────────────────────────────────────────
-function printRecipe(recipe, ingredients, lang) {
+function printRecipe(recipe, ingredients, lang, allRecipes=[]) {
   const recName = (lang==="en" && recipe.name_en) ? recipe.name_en : recipe.name;
   const T = lang==="en" ? {
     subtitle:"CHEFCOST · RECIPE CARD", portions:"Portions", portionSize:"Portion size", prep:"Prep",
     cook:"Cook", shelf:"Shelf life", allergens:"Allergens", ingredientsT:"Ingredients", noIng:"No ingredients",
     prepT:"Preparation", noSteps:"No steps registered yet.", yes:"Yes", no:"No", generated:"Generated with ChefCost",
+    costTitle:"Cost Summary", costPer:"Cost / portion", sellPrice:"Sell price", foodCost:"Food cost %",
+    sugPrice:"Suggested price", margin:"Gross margin", noPrice:"No price set", targetMargin:"Target margin",
   } : {
     subtitle:"CHEFCOST · FICHA DE RECETA", portions:"Porciones", portionSize:"Tamaño/porción", prep:"Prep",
     cook:"Cocción", shelf:"Vida útil", allergens:"Alérgenos", ingredientsT:"Ingredientes", noIng:"Sin ingredientes",
     prepT:"Preparación", noSteps:"Sin pasos registrados todavía.", yes:"Sí", no:"No", generated:"Generado con ChefCost",
+    costTitle:"Resumen de Costos", costPer:"Costo / porción", sellPrice:"Precio de venta", foodCost:"Food cost %",
+    sugPrice:"Precio sugerido", margin:"Margen bruto", noPrice:"Sin precio asignado", targetMargin:"Margen objetivo",
   };
+  // Cost calculations
+  const c = calcRecipe(recipe, ingredients, allRecipes);
+  const cpp = c.cpp;
+  const sellP = recipe.selling_price ? parseFloat(recipe.selling_price) : null;
+  const hasSell = sellP && sellP > 0;
+  const fcPct = hasSell ? (cpp / sellP) * 100 : null;
+  const sugTarget = recipe.target_margin ? (recipe.target_margin / 100) : 0.70;
+  const sugP = cpp > 0 ? cpp / (1 - sugTarget) : null;
+  const grossMargin = hasSell ? ((sellP - cpp) / sellP) * 100 : null;
   const ing = recipe.ingredients.map(ri => {
     const i = ingredients.find(x => x.id === ri.ing_id);
     return `<div class="ing-row"><span class="ing-qty">${ri.qty} ${ri.unit}</span><span class="ing-name">${i ? i.name : "Ingrediente"}</span></div>`;
@@ -1524,6 +1537,34 @@ function printRecipe(recipe, ingredients, lang) {
     <div class="prep-section">
       ${stepsHtml || `<p class='empty-note'>${T.noSteps}</p>`}
     </div>
+
+    <div class="section-title"><span class="dot"></span>${T.costTitle}</div>
+    <div class="cost-grid">
+      <div class="cost-cell">
+        <div class="cost-label">${T.costPer}</div>
+        <div class="cost-value accent">${cpp > 0 ? `$${cpp.toFixed(2)}` : "—"}</div>
+      </div>
+      <div class="cost-cell">
+        <div class="cost-label">${T.sellPrice}</div>
+        <div class="cost-value">${hasSell ? `$${sellP.toFixed(2)}` : `<span class='cost-warn'>${T.noPrice}</span>`}</div>
+      </div>
+      <div class="cost-cell">
+        <div class="cost-label">${T.foodCost}</div>
+        <div class="cost-value ${fcPct !== null ? (fcPct > 35 ? "cost-err" : "cost-ok") : ""}">${fcPct !== null ? `${fcPct.toFixed(1)}%` : "—"}</div>
+      </div>
+      <div class="cost-cell">
+        <div class="cost-label">${T.sugPrice} <span class="cost-badge">${recipe.target_margin ? `${recipe.target_margin}%` : "30% FC"}</span></div>
+        <div class="cost-value accent">${sugP ? `$${sugP.toFixed(2)}` : "—"}</div>
+      </div>
+      <div class="cost-cell">
+        <div class="cost-label">${T.margin}</div>
+        <div class="cost-value ${grossMargin !== null ? (grossMargin >= 65 ? "cost-ok" : grossMargin >= 45 ? "cost-warn" : "cost-err") : ""}">${grossMargin !== null ? `${grossMargin.toFixed(1)}%` : "—"}</div>
+      </div>
+      <div class="cost-cell">
+        <div class="cost-label">${T.targetMargin}</div>
+        <div class="cost-value">${recipe.target_margin ? `${recipe.target_margin}%` : "70%"}</div>
+      </div>
+    </div>
   `;
 
   const old = document.getElementById("__recipe_print_container");
@@ -1571,6 +1612,16 @@ function printRecipe(recipe, ingredients, lang) {
     #__recipe_print_container .stage-block li { margin-bottom:4px; color:#333; }
     #__recipe_print_container .step-time { color:#C8312B; font-weight:700; font-size:11px; }
     #__recipe_print_container .empty-note { color:#999; font-size:12px; font-style:italic; }
+    #__recipe_print_container .cost-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
+    #__recipe_print_container .cost-cell { border:1px solid #e5e5e5; border-radius:10px; padding:10px 14px; background:#fafafa; }
+    #__recipe_print_container .cost-label { font-size:9px; color:#888; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:5px; display:flex; align-items:center; gap:5px; }
+    #__recipe_print_container .cost-value { font-size:16px; font-weight:800; color:#1a1a1a; }
+    #__recipe_print_container .cost-value.accent { color:#C8312B; }
+    #__recipe_print_container .cost-value.cost-ok { color:#2a7d4f; }
+    #__recipe_print_container .cost-value.cost-warn { color:#b07a00; }
+    #__recipe_print_container .cost-value.cost-err { color:#c0392b; }
+    #__recipe_print_container .cost-warn { color:#b07a00; font-size:11px; font-weight:600; }
+    #__recipe_print_container .cost-badge { display:inline-block; background:#f0f0f0; border-radius:4px; padding:1px 5px; font-size:8px; font-weight:700; color:#555; letter-spacing:0.3px; }
     #__recipe_print_container .footer-note { margin-top:34px; font-size:9px; color:#aaa; border-top:1px solid #eee; padding-top:10px; display:flex; justify-content:space-between; letter-spacing:0.3px; }
 
     @media print {
@@ -1809,7 +1860,7 @@ function Recipes() {
                       </td>
                       <td style={g.td}>
                         <div style={{display:"flex",gap:5}}>
-                          <button style={g.btnI} onClick={()=>printRecipe(r,ingredients,lang)}><i className="ti ti-file-download" style={{fontSize:12}}/>PDF</button>
+                          <button style={g.btnI} onClick={()=>printRecipe(r,ingredients,lang,recipes)}><i className="ti ti-file-download" style={{fontSize:12}}/>PDF</button>
                           <button style={g.btnI} onClick={()=>setEd(r)}><i className="ti ti-pencil" style={{fontSize:12}}/>{t("edit",lang)}</button>
                           <button style={g.btnD} onClick={()=>removeRecipe(r.id)}><i className="ti ti-trash" style={{fontSize:12}}/>{t("delete",lang)}</button>
                         </div>
@@ -2120,7 +2171,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
 
         <div style={{display:"flex",gap:10}}>
           <button style={{...g.btnP,flex:1,justifyContent:"center"}} onClick={()=>onSave({...r,selling_price:cm==="margin"&&sug?sug.toFixed(2):r.selling_price})}><i className="ti ti-check"/>{t("saveRecipe",lang)}</button>
-          {!isNew&&<button style={g.btnI} onClick={()=>printRecipe(r,ingredients,lang)}><i className="ti ti-file-download"/>{t("downloadPdf",lang)}</button>}
+          {!isNew&&<button style={g.btnI} onClick={()=>printRecipe(r,ingredients,lang,allRecipes)}><i className="ti ti-file-download"/>{t("downloadPdf",lang)}</button>}
           <button style={g.btnS} onClick={onClose}>{t("cancel",lang)}</button>
         </div>
       </div>
