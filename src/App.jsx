@@ -908,23 +908,61 @@ function Dashboard() {
       )}
 
       {/* ── KPI row ── */}
-      <div style={{ display:"grid", gridTemplateColumns:`repeat(${isMobile?2:4},1fr)`, gap:8 }}>
-        {[
+      {(() => {
+        const unpriced = menuDishes.filter(r=>!r.selling_price||parseFloat(r.selling_price)===0);
+        const kpis = [
           { icon:"ti-basket",       label:lang==="en"?"Ingredients":"Ingredientes",  value:ingredients.length,            sub:lang==="en"?"registered":"registrados",   color:TEXT },
           { icon:"ti-book",         label:lang==="en"?"Menu dishes":"Platos",        value:menuDishes.length,             sub:lang==="en"?"in menu":"en menú",           color:TEXT },
           { icon:"ti-currency-dollar", label:lang==="en"?"Avg cost":"Costo prom.",  value:`$${avgCost.toFixed(2)}`,      sub:lang==="en"?"per portion":"por porción",    color:"#EF9F27" },
           { icon:"ti-trending-up",  label:lang==="en"?"Price alerts":"Alertas",     value:priceUp.length,                sub:lang==="en"?"rose this week":"subieron",   color:priceUp.length>0?FC_ERR:FC_OK, onClick: priceUp.length>0?()=>setShowAlerts(true):null },
-        ].map((s,i) => (
-          <div key={i} onClick={s.onClick||undefined} style={{ background:SURF, border:`1px solid ${s.onClick?FC_ERR:BDR}`, borderRadius:10, padding:"12px 14px", cursor:s.onClick?"pointer":"default", transition:"box-shadow 0.15s" }} onMouseEnter={e=>{ if(s.onClick) e.currentTarget.style.boxShadow="0 2px 8px rgba(196,43,28,0.15)"; }} onMouseLeave={e=>{ e.currentTarget.style.boxShadow="none"; }}>
-            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
-              <i className={`ti ${s.icon}`} style={{ fontSize:14, color:s.color }}/>
-              <span style={{ fontSize:10, color:TEXT2, fontWeight:600, textTransform:"uppercase", letterSpacing:0.4 }}>{s.label}</span>
+        ];
+        return (
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            <div style={{ display:"grid", gridTemplateColumns:`repeat(${isMobile?2:4},1fr)`, gap:8 }}>
+              {kpis.map((s,i) => (
+                <div key={i} onClick={s.onClick||undefined} style={{ background:SURF, border:`1px solid ${s.onClick?FC_ERR:BDR}`, borderRadius:10, padding:"12px 14px", cursor:s.onClick?"pointer":"default", transition:"box-shadow 0.15s" }} onMouseEnter={e=>{ if(s.onClick) e.currentTarget.style.boxShadow="0 2px 8px rgba(196,43,28,0.15)"; }} onMouseLeave={e=>{ e.currentTarget.style.boxShadow="none"; }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
+                    <i className={`ti ${s.icon}`} style={{ fontSize:14, color:s.color }}/>
+                    <span style={{ fontSize:10, color:TEXT2, fontWeight:600, textTransform:"uppercase", letterSpacing:0.4 }}>{s.label}</span>
+                  </div>
+                  <div style={{ fontSize:24, fontWeight:700, color:s.color, lineHeight:1 }}>{s.value}</div>
+                  <div style={{ fontSize:10, color:TEXT2, marginTop:4 }}>{s.sub}</div>
+                </div>
+              ))}
             </div>
-            <div style={{ fontSize:24, fontWeight:700, color:s.color, lineHeight:1 }}>{s.value}</div>
-            <div style={{ fontSize:10, color:TEXT2, marginTop:4 }}>{s.sub}</div>
+            {/* Unpriced recipes alert banner */}
+            {unpriced.length > 0 && (
+              <div style={{ background:"rgba(200,49,43,0.05)", border:`1px solid rgba(200,49,43,0.25)`, borderRadius:10, padding:"10px 16px", display:"flex", alignItems:"center", gap:10 }} onClick={()=>setPage("recipes")}>
+                <i className="ti ti-tag-off" style={{ fontSize:16, color:ACCENT, flexShrink:0 }}/>
+                <div style={{ flex:1 }}>
+                  <span style={{ fontSize:13, fontWeight:600, color:ACCENT }}>
+                    {unpriced.length} {lang==="en" ? (unpriced.length===1?"dish has":"dishes have") : (unpriced.length===1?"plato sin":"platos sin")} {lang==="en"?"no sell price set":"precio de venta"}
+                  </span>
+                  <span style={{ fontSize:11, color:TEXT2, marginLeft:8 }}>
+                    {lang==="en"?"Set prices to track your margins":"Agrega precios para ver tu margen"}
+                  </span>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:2, alignItems:"flex-end" }}>
+                  {unpriced.slice(0,2).map(r => {
+                    const c2 = calcRecipe(r, ingredients, recipes);
+                    const sp = c2.cpp > 0 ? c2.cpp / 0.70 : null;
+                    return sp ? (
+                      <span key={r.id} style={{ fontSize:11, color:TEXT2 }}>
+                        <b style={{ color:TEXT }}>{lang==="en"&&r.name_en?r.name_en:r.name}</b>
+                        {" → "}
+                        <b style={{ color:ACCENT }}>${sp.toFixed(2)}</b>
+                        <span style={{ color:TEXT2, fontSize:9 }}> {lang==="en"?"suggested":"sugerido"}</span>
+                      </span>
+                    ) : null;
+                  })}
+                  {unpriced.length > 2 && <span style={{ fontSize:10, color:TEXT2 }}>+{unpriced.length-2} {lang==="en"?"more":"más"}</span>}
+                </div>
+                <i className="ti ti-chevron-right" style={{ fontSize:14, color:ACCENT }}/>
+              </div>
+            )}
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
       {/* ── Hero card: top dish ── */}
       {topDish && (
@@ -1018,19 +1056,44 @@ function Dashboard() {
               <th style={g.th}>{lang==="en"?"Dish":"Plato"}</th>
               <th style={g.th}>{lang==="en"?"Cost/portion":"Costo/porción"}</th>
               <th style={g.th}>{lang==="en"?"Sell price":"Precio venta"}</th>
+              <th style={{...g.th,color:ACCENT}}>{lang==="en"?"Suggested":"Sugerido"}</th>
               <th style={g.th}>{lang==="en"?"Food cost %":"% Costo alim."}</th>
               <th style={g.th}>{lang==="en"?"Margin":"Margen"}</th>
             </tr></thead>
             <tbody>
               {sorted.map((r, idx) => {
-                const fc = r.selling_price > 0 ? (r.cpp / r.selling_price) * 100 : 0;
+                const hasSell = r.selling_price && parseFloat(r.selling_price) > 0;
+                const fc = hasSell ? (r.cpp / parseFloat(r.selling_price)) * 100 : null;
+                const sugTarget = r.target_margin ? (r.target_margin/100) : 0.70;
+                const sugPrice  = r.cpp > 0 ? r.cpp / (1 - sugTarget) : null;
+                const fcHigh    = fc !== null && fc > 35;
+                const needsPrice = !hasSell;
                 return (
-                  <tr key={r.id} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  <tr key={r.id} style={{background: needsPrice?"rgba(200,49,43,0.02)":"transparent"}} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background=needsPrice?"rgba(200,49,43,0.02)":"transparent"}>
                     <td style={{ ...g.td, color:TEXT2, width:28, textAlign:"center" }}>{idx+1}</td>
-                    <td style={{ ...g.td, fontWeight:600 }}>{lang==="en"&&r.name_en?r.name_en:r.name}</td>
+                    <td style={{ ...g.td, fontWeight:600 }}>
+                      {lang==="en"&&r.name_en?r.name_en:r.name}
+                      {needsPrice && <span style={{fontSize:9,background:"rgba(200,49,43,0.1)",color:ACCENT,padding:"1px 5px",borderRadius:3,marginLeft:6,fontWeight:600}}>{lang==="en"?"NO PRICE":"SIN PRECIO"}</span>}
+                    </td>
                     <td style={{ ...g.td, color:TEXT2 }}>${r.cpp.toFixed(2)}</td>
-                    <td style={g.td}>${parseFloat(r.selling_price).toFixed(2)}</td>
-                    <td style={g.td}><span style={{ fontSize:12, fontWeight:600, color:fc<=30?FC_OK:fc<=40?FC_WARN:FC_ERR }}>{fc.toFixed(1)}%</span></td>
+                    <td style={g.td}>
+                      {hasSell
+                        ? <span style={{fontWeight:600,color:fcHigh?FC_ERR:TEXT}}>${parseFloat(r.selling_price).toFixed(2)}</span>
+                        : <span style={{color:TEXT2}}>—</span>}
+                    </td>
+                    <td style={g.td}>
+                      {sugPrice !== null && (
+                        <div>
+                          <span style={{fontWeight:700,color:ACCENT}}>${sugPrice.toFixed(2)}</span>
+                          {fcHigh && <span style={{fontSize:9,color:FC_ERR,marginLeft:4}}>⚠</span>}
+                        </div>
+                      )}
+                    </td>
+                    <td style={g.td}>
+                      {fc !== null
+                        ? <span style={{ fontSize:12, fontWeight:600, color:fc<=30?FC_OK:fc<=40?FC_WARN:FC_ERR }}>{fc.toFixed(1)}%</span>
+                        : <span style={{color:TEXT2}}>—</span>}
+                    </td>
                     <td style={g.td}><span style={g.badge(mType(r.margin))}>{r.margin.toFixed(1)}%</span></td>
                   </tr>
                 );
@@ -1682,11 +1745,20 @@ function Recipes() {
               <thead><tr>
                 <th style={g.th}>{t("dish",lang)}</th><th style={g.th}>{t("portions",lang)}</th><th style={g.th}>{t("size",lang)}</th>
                 <th style={g.th}>{t("waste",lang)}</th><th style={g.th}>{t("cost",lang)}</th><th style={g.th}>{t("costWaste",lang)}</th>
-                <th style={g.th}>{t("costPerPortion",lang)}</th><th style={g.th}>{t("sellPrice",lang)}</th><th style={g.th}>{t("margin",lang)}</th><th style={g.th}>{t("allergensCol",lang)}</th><th style={g.th}>{t("actions",lang)}</th>
+                <th style={g.th}>{t("costPerPortion",lang)}</th>
+                <th style={g.th}>{lang==="en"?"Sell price":"P.Venta"}</th>
+                <th style={{...g.th,color:ACCENT}}>{lang==="en"?"Suggested price":"Precio sugerido"}</th>
+                <th style={g.th}>{t("margin",lang)}</th><th style={g.th}>{t("allergensCol",lang)}</th><th style={g.th}>{t("actions",lang)}</th>
               </tr></thead>
               <tbody>
                 {cat.items.map(r=>{
                   const c=calcRecipe(r,ingredients,recipes);
+                  // Suggested price = cost per portion / 0.30 (30% food cost target)
+                  const sugTarget = r.target_margin ? (r.target_margin/100) : 0.70;
+                  const sugPrice  = c.cpp > 0 ? c.cpp / (1 - sugTarget) : null;
+                  const hasSell   = r.selling_price && parseFloat(r.selling_price) > 0;
+                  const fc        = hasSell ? (c.cpp / parseFloat(r.selling_price)) * 100 : null;
+                  const fcHigh    = fc !== null && fc > 35;
                   return (
                     <tr key={r.id} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <td style={{...g.td,fontWeight:600}}>{lang==="en"&&r.name_en?r.name_en:r.name}</td>
@@ -1696,7 +1768,28 @@ function Recipes() {
                       <td style={{...g.td,color:TEXT2}}>${c.raw.toFixed(2)}</td>
                       <td style={{...g.td,color:"#EF9F27"}}>${c.total.toFixed(2)}</td>
                       <td style={{...g.td,fontWeight:700,color:ACCENT}}>${c.cpp.toFixed(3)}</td>
-                      <td style={g.td}>${parseFloat(r.selling_price||0).toFixed(2)}</td>
+                      <td style={g.td}>
+                        {hasSell
+                          ? <span style={{fontWeight:600,color:fcHigh?FC_ERR:TEXT}}>${parseFloat(r.selling_price).toFixed(2)}</span>
+                          : <span style={{fontSize:11,color:TEXT2}}>—</span>}
+                      </td>
+                      <td style={g.td}>
+                        {sugPrice !== null && (
+                          <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                            <span style={{fontWeight:700,color:ACCENT,fontSize:13}}>${sugPrice.toFixed(2)}</span>
+                            <span style={{fontSize:9,color:TEXT2}}>
+                              {r.target_margin
+                                ? `${r.target_margin}% ${lang==="en"?"margin":"margen"}`
+                                : lang==="en"?"30% food cost":"30% costo alim."}
+                            </span>
+                            {fcHigh && hasSell && (
+                              <span style={{fontSize:9,fontWeight:600,color:FC_ERR,background:"rgba(196,43,28,0.06)",padding:"1px 4px",borderRadius:3}}>
+                                ⚠ {lang==="en"?"Reprice":"Revisar"}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
                       <td style={g.td}>
                         <div style={{display:"flex",alignItems:"center",gap:6}}>
                           <div style={{width:40,height:4,background:BDR,borderRadius:99,overflow:"hidden"}}>
