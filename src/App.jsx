@@ -3051,6 +3051,7 @@ function WasteLog() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState("all"); // all, ingredient, recipe
+  const [confirmDelete, setConfirmDelete] = useState(null); // id to confirm delete
   const [form, setForm] = useState({ type:"ingredient", item_id:"", item_name:"", quantity:"", unit:"", reason:"", notes:"" });
   const sf = (k,v) => setForm(x=>({...x,[k]:v}));
   const reasons = WASTE_REASONS_ES; // Always store in Spanish internally
@@ -3113,13 +3114,41 @@ function WasteLog() {
     setShowForm(false);
   }
 
+  // #1 — delete with confirmation
   async function remove(id) {
+    if (confirmDelete !== id) { setConfirmDelete(id); return; }
     const { error } = await supabase.from("waste_log").delete().eq("id", id);
     if (error) { alert("Error eliminando: " + error.message); return; }
     setLogs(p => p.filter(l => l.id !== id));
+    setConfirmDelete(null);
+  }
+
+  // #2 — CSV export
+  function exportCSV() {
+    const rows = [
+      [lang==="en"?"Date":"Fecha", lang==="en"?"Type":"Tipo", lang==="en"?"Item":"Ítem", lang==="en"?"Quantity":"Cantidad", lang==="en"?"Unit":"Unidad", lang==="en"?"Reason":"Razón", lang==="en"?"Cost lost":"Costo perdido", lang==="en"?"Notes":"Notas"],
+      ...filtered.map(l => [
+        new Date(l.logged_at).toLocaleDateString(),
+        l.type==="ingredient"?(lang==="en"?"Ingredient":"Ingrediente"):(lang==="en"?"Dish":"Plato"),
+        l.item_name,
+        l.quantity,
+        l.unit,
+        translateReason(l.reason, lang),
+        parseFloat(l.cost||0).toFixed(2),
+        l.notes||""
+      ])
+    ];
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob(["﻿"+csv], { type:"text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `waste_log_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
   }
 
   const filtered = filter === "all" ? logs : logs.filter(l => l.type === filter);
+  // #5 — footer total uses filtered, KPIs always use all logs
+  const filteredCost = filtered.reduce((s, l) => s + (parseFloat(l.cost) || 0), 0);
   const totalCost = logs.reduce((s, l) => s + (parseFloat(l.cost) || 0), 0);
   const todayCost = logs.filter(l => new Date(l.logged_at).toDateString() === new Date().toDateString()).reduce((s, l) => s + (parseFloat(l.cost) || 0), 0);
   const weekCost = logs.filter(l => (new Date() - new Date(l.logged_at)) < 7 * 24 * 60 * 60 * 1000).reduce((s, l) => s + (parseFloat(l.cost) || 0), 0);
@@ -3127,7 +3156,24 @@ function WasteLog() {
   // Group reasons for summary
   const byReason = {};
   logs.forEach(l => { byReason[l.reason] = (byReason[l.reason] || 0) + (parseFloat(l.cost) || 0); });
+  // #4 — topReason with % of total
   const topReason = Object.entries(byReason).sort((a,b) => b[1]-a[1])[0];
+  const topReasonPct = topReason && totalCost > 0 ? Math.round((topReason[1]/totalCost)*100) : 0;
+
+  // #3 — mini chart: last 7 days daily cost
+  const wasteChart = (()=>{
+    const days = Array.from({length:7}, (_,i)=>{
+      const d = new Date(); d.setDate(d.getDate()-6+i);
+      return { label: d.toLocaleDateString(lang==="en"?"en-US":"es", {weekday:"short"}), date: d.toDateString(), cost:0 };
+    });
+    logs.forEach(l => {
+      const ds = new Date(l.logged_at).toDateString();
+      const day = days.find(d => d.date === ds);
+      if (day) day.cost += parseFloat(l.cost) || 0;
+    });
+    return days;
+  })();
+  const maxDayCost = Math.max(...wasteChart.map(d=>d.cost), 0.01);
 
   return (
     <div style={{padding:20, display:"flex", flexDirection:"column", gap:16}}>
@@ -3137,14 +3183,37 @@ function WasteLog() {
           {label:lang==="en"?"Lost today":"Pérdida hoy",       value:`$${todayCost.toFixed(2)}`,  color:"#E24B4A"},
           {label:lang==="en"?"Lost this week":"Esta semana",    value:`$${weekCost.toFixed(2)}`,   color:"#EF9F27"},
           {label:lang==="en"?"Total logged":"Total registrado", value:`$${totalCost.toFixed(2)}`,  color:TEXT},
-          {label:lang==="en"?"Top reason":"Mayor causa",        value:topReason?translateReason(topReason[0],lang):"—",  color:ACCENT, small:true},
+          // #4 — top reason + % del total
+          {label:lang==="en"?"Top reason":"Mayor causa", value:topReason?translateReason(topReason[0],lang):"—", sub:topReason&&totalCost>0?`${topReasonPct}% ${lang==="en"?"of total":"del total"}`:null, color:ACCENT, small:true},
         ].map((s,i) => (
           <div key={i} style={{background:SURF, border:`1px solid ${BDR}`, borderRadius:10, padding:"12px 14px"}}>
             <div style={{fontSize:10, color:TEXT2, marginBottom:4}}>{s.label}</div>
             <div style={{fontSize:s.small?12:20, fontWeight:700, color:s.color, lineHeight:1.3}}>{s.value}</div>
+            {s.sub && <div style={{fontSize:10, color:TEXT2, marginTop:2}}>{s.sub}</div>}
           </div>
         ))}
       </div>
+
+      {/* #3 — Mini 7-day chart */}
+      {logs.length > 0 && (
+        <div style={{...g.card, padding:"14px 16px"}}>
+          <div style={{fontSize:11, fontWeight:600, color:TEXT2, marginBottom:10}}>{lang==="en"?"Waste — last 7 days":"Desperdicio — últimos 7 días"}</div>
+          <div style={{display:"flex", gap:4, alignItems:"flex-end", height:52}}>
+            {wasteChart.map((d,i) => {
+              const pct = d.cost / maxDayCost;
+              const barH = Math.max(pct * 44, d.cost > 0 ? 4 : 2);
+              const isToday = i === 6;
+              return (
+                <div key={i} style={{flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3}}>
+                  <div style={{fontSize:9, color:TEXT2, fontWeight:isToday?700:400}}>{d.cost>0?`$${d.cost.toFixed(0)}`:""}</div>
+                  <div style={{width:"100%", height:barH, background:isToday?ACCENT:d.cost>0?"rgba(200,49,43,0.35)":BDR, borderRadius:"3px 3px 0 0", transition:"height 0.3s"}}/>
+                  <div style={{fontSize:9, color:isToday?ACCENT:TEXT2, fontWeight:isToday?700:400}}>{d.label}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Controls */}
       <div style={{display:"flex", gap:10, flexWrap:"wrap", alignItems:"center"}}>
@@ -3153,9 +3222,17 @@ function WasteLog() {
             <button key={id} style={{background:filter===id?SURF:"transparent", color:filter===id?TEXT:TEXT2, border:"none", borderRadius:8, padding:"7px 14px", fontSize:11, fontWeight:filter===id?600:400, cursor:"pointer"}} onClick={()=>setFilter(id)}>{label}</button>
           ))}
         </div>
-        <button style={{...g.btnP, marginLeft:"auto"}} onClick={()=>setShowForm(v=>!v)}>
-          <i className={`ti ${showForm?"ti-x":"ti-plus"}`}/>{showForm?(lang==="en"?"Cancel":"Cancelar"):(lang==="en"?"Log waste":"Registrar desperdicio")}
-        </button>
+        <div style={{marginLeft:"auto", display:"flex", gap:8}}>
+          {/* #2 — CSV export button */}
+          {filtered.length > 0 && (
+            <button style={g.btnS} onClick={exportCSV}>
+              <i className="ti ti-download" style={{fontSize:13}}/>{lang==="en"?"Export CSV":"Exportar CSV"}
+            </button>
+          )}
+          <button style={g.btnP} onClick={()=>setShowForm(v=>!v)}>
+            <i className={`ti ${showForm?"ti-x":"ti-plus"}`}/>{showForm?(lang==="en"?"Cancel":"Cancelar"):(lang==="en"?"Log waste":"Registrar desperdicio")}
+          </button>
+        </div>
       </div>
 
       {/* Form */}
@@ -3267,15 +3344,26 @@ function WasteLog() {
                     <td style={g.td}><span style={g.badge("warn")}>{translateReason(log.reason, lang)}</span></td>
                     <td style={{...g.td, fontWeight:700, color:"#E24B4A"}}>${parseFloat(log.cost||0).toFixed(2)}</td>
                     <td style={{...g.td, color:TEXT2, fontStyle:"italic"}}>{log.notes||"—"}</td>
-                    <td style={g.td}><button style={g.btnD} onClick={()=>remove(log.id)}><i className="ti ti-trash" style={{fontSize:12}}/>{lang==="en"?"Delete":"Eliminar"}</button></td>
+                    {/* #1 — delete with confirmation */}
+                    <td style={g.td}>
+                      {confirmDelete === log.id
+                        ? <div style={{display:"flex", gap:4, alignItems:"center"}}>
+                            <span style={{fontSize:10, color:"#E24B4A", fontWeight:600}}>{lang==="en"?"Sure?":"¿Seguro?"}</span>
+                            <button style={{...g.btnD, background:"rgba(226,75,74,0.15)", color:"#E24B4A"}} onClick={()=>remove(log.id)}><i className="ti ti-check" style={{fontSize:12}}/></button>
+                            <button style={g.btnS} onClick={()=>setConfirmDelete(null)}><i className="ti ti-x" style={{fontSize:12}}/></button>
+                          </div>
+                        : <button style={g.btnD} onClick={()=>remove(log.id)}><i className="ti ti-trash" style={{fontSize:12}}/>{lang==="en"?"Delete":"Eliminar"}</button>
+                      }
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {/* #5 — footer total uses filtered */}
           <div style={{padding:"10px 16px", borderTop:`1px solid ${BDR}`, display:"flex", justifyContent:"flex-end", gap:20, fontSize:12}}>
-            <span style={{color:TEXT2}}>{filtered.length} {lang==="en"?"entries":"registros"}</span>
-            <span style={{fontWeight:700, color:"#E24B4A"}}>{lang==="en"?"Total lost:":"Total perdido:"} ${filtered.reduce((s,l)=>s+(parseFloat(l.cost)||0),0).toFixed(2)}</span>
+            <span style={{color:TEXT2}}>{filtered.length} {lang==="en"?"entries":"registros"}{filter!=="all"?` (${lang==="en"?"filtered":"filtrado"})`:""}</span>
+            <span style={{fontWeight:700, color:"#E24B4A"}}>{lang==="en"?"Total lost:":"Total perdido:"} ${filteredCost.toFixed(2)}</span>
           </div>
         </div>
       }
