@@ -3524,7 +3524,7 @@ function ShoppingList() {
 }
 
 function Settings() {
-  const { currentUser, setUser, users, setUsers, lang, setLang, mainSupplier, setMainSupplier, orderDays, setOrderDays, ingredients, restaurantName } = useApp();
+  const { currentUser, setUser, users, setUsers, lang, setLang, mainSupplier, setMainSupplier, orderDays, setOrderDays, ingredients, restaurantName, plan, setPlan } = useApp();
   const [tab,setTab]=useState("account");
   const [editU,setEd]=useState(null);
   const [addNew,setAN]=useState(false);
@@ -3554,7 +3554,9 @@ function Settings() {
     {id:"orders",   label:lang==="en"?"Order schedule":"Días de pedido", icon:"ti-calendar-event"},
     {id:"language", label:lang==="es"?"Idioma":"Language",      icon:"ti-language"},
     ...(currentUser.role==="admin"?[{id:"users",label:t("users",lang),icon:"ti-users"}]:[]),
+    ...(currentUser.role==="admin"?[{id:"billing",label:lang==="en"?"Billing":"Suscripción",icon:"ti-credit-card"}]:[]),
   ];
+  const atUserLimit = (plan==="trial"||plan==="starter") && users.length >= 3;
   const DAYS_ES=["lunes","martes","miércoles","jueves","viernes","sábado","domingo"];
   const DAYS_EN=["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
   const dayOptLabel=(d)=>{const i=DAYS_ES.indexOf(d);return lang==="en"?DAYS_EN[i]:d;};
@@ -3666,7 +3668,14 @@ function Settings() {
             <div style={{fontSize:14,fontWeight:700}}>{lang==="en"?"Team":"Equipo"} <span style={{fontSize:12,color:TEXT2,fontWeight:400}}>({users.length} {lang==="en"?"members":"miembros"})</span></div>
             <div style={{fontSize:11,color:TEXT2,marginTop:2}}>{lang==="en"?"Manage who has access to this restaurant's account":"Gestiona quién tiene acceso a la cuenta del restaurante"}</div>
           </div>
-          <button style={g.btnP} onClick={()=>setAN(true)}><i className="ti ti-user-plus"/>{lang==="en"?"Add member":"Añadir miembro"}</button>
+          {atUserLimit
+            ? <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 12px",background:"rgba(200,49,43,0.06)",border:`1px solid rgba(200,49,43,0.2)`,borderRadius:8}}>
+                <i className="ti ti-lock" style={{color:ACCENT,fontSize:13}}/>
+                <span style={{fontSize:11,color:ACCENT,fontWeight:600}}>{lang==="en"?"3-member limit reached":"Límite de 3 miembros"}</span>
+                <button style={{...g.btnP,fontSize:10,padding:"4px 10px",marginLeft:4}} onClick={()=>setTab("billing")}>{lang==="en"?"Upgrade":"Mejorar plan"}</button>
+              </div>
+            : <button style={g.btnP} onClick={()=>setAN(true)}><i className="ti ti-user-plus"/>{lang==="en"?"Add member":"Añadir miembro"}</button>
+          }
         </div>
 
         {/* Info banner — how to share access */}
@@ -3747,9 +3756,149 @@ function Settings() {
           <i className="ti ti-users" style={{fontSize:40,color:TEXT2,display:"block",marginBottom:12}}/>
           <div style={{fontSize:13,fontWeight:600,marginBottom:6}}>{lang==="en"?"Just you for now":"Solo tú por ahora"}</div>
           <div style={{fontSize:11,color:TEXT2,marginBottom:16}}>{lang==="en"?"Add chefs or employees to collaborate on this account":"Añade chefs o empleados para colaborar en esta cuenta"}</div>
-          <button style={g.btnP} onClick={()=>setAN(true)}><i className="ti ti-user-plus"/>{lang==="en"?"Add first member":"Añadir primer miembro"}</button>
+          <button style={g.btnP} onClick={()=>atUserLimit?setTab("billing"):setAN(true)}><i className={atUserLimit?"ti-arrow-up-circle":"ti-user-plus"}/>{atUserLimit?(lang==="en"?"Upgrade plan":"Mejorar plan"):(lang==="en"?"Add first member":"Añadir primer miembro")}</button>
         </div>}
       </div>}
+      {tab==="billing"&&currentUser.role==="admin"&&(()=>{
+        const PLAN_LABEL = { trial: lang==="en"?"Free Trial":"Prueba gratuita", starter: "Starter", pro: "Pro" };
+        const PLAN_COLOR = { trial: "#5F5F5F", starter: "#378ADD", pro: ACCENT };
+        const PLAN_BG    = { trial: "rgba(95,95,95,0.07)", starter: "rgba(55,138,221,0.08)", pro: "rgba(200,49,43,0.07)" };
+
+        const TIERS = [
+          {
+            id:"starter", name:"Starter", price:"$19", period:lang==="en"?"/month":"/mes",
+            tagline: lang==="en"?"For small kitchens getting serious about food cost":"Para cocinas pequeñas que quieren controlar su costo",
+            color:"#378ADD", border:"rgba(55,138,221,0.3)", bg:"rgba(55,138,221,0.04)",
+            features: lang==="en"
+              ? ["Up to 3 team members","Unlimited ingredients & recipes","Cost calculator with waste %","PDF recipe cards","Excel export (ingredients & recipes)","Dashboard with stock & cost alerts","Price trend sparklines","Suggested pricing engine","Food cost target tracking"]
+              : ["Hasta 3 miembros del equipo","Ingredientes y recetas ilimitados","Calculadora de costos con % merma","Fichas técnicas en PDF","Exportar a Excel (ingredientes y recetas)","Dashboard con alertas de stock y costo","Gráficas de tendencia de precios","Motor de precio sugerido","Seguimiento de objetivo de costo"],
+          },
+          {
+            id:"pro", name:"Pro", price:"$49", period:lang==="en"?"/month":"/mes",
+            tagline: lang==="en"?"For multi-location restaurants & larger teams":"Para restaurantes multi-local y equipos grandes",
+            color:ACCENT, border:"rgba(200,49,43,0.3)", bg:"rgba(200,49,43,0.04)",
+            features: lang==="en"
+              ? ["Unlimited team members","Everything in Starter","Invoice scanner (AI cost entry)","Inventory counts & valuation","Waste log & reporting","Shopping list with supplier split","Accounts payable tracker","KDS integration — coming soon 🚀"]
+              : ["Miembros del equipo ilimitados","Todo lo de Starter","Escáner de facturas (entrada de costos con IA)","Conteos e inventarios valorados","Registro de desperdicio y reportes","Lista de compras con separación por proveedor","Seguimiento de cuentas por pagar","Integración KDS — próximamente 🚀"],
+          },
+        ];
+
+        return (
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            {/* Current plan banner */}
+            <div style={{...g.card,padding:16,display:"flex",alignItems:"center",gap:14}}>
+              <div style={{width:48,height:48,borderRadius:12,background:PLAN_BG[plan],display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <i className="ti ti-credit-card" style={{fontSize:22,color:PLAN_COLOR[plan]}}/>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,color:TEXT2,fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>{lang==="en"?"Current plan":"Plan actual"}</div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:18,fontWeight:800,color:PLAN_COLOR[plan]}}>{PLAN_LABEL[plan]}</span>
+                  <span style={{fontSize:10,background:PLAN_BG[plan],color:PLAN_COLOR[plan],padding:"2px 8px",borderRadius:99,fontWeight:700,border:`1px solid ${PLAN_COLOR[plan]}33`}}>
+                    {plan==="trial"?(lang==="en"?"Active":"Activo"):"✓ Active"}
+                  </span>
+                </div>
+                <div style={{fontSize:11,color:TEXT2,marginTop:2}}>
+                  {plan==="trial"
+                    ? (lang==="en"?"You're on the free trial. Upgrade to unlock all features.":"Estás en la prueba gratuita. Mejora para desbloquear todo.")
+                    : plan==="starter"
+                    ? (lang==="en"?"Up to 3 team members · All Starter features included.":"Hasta 3 miembros · Todas las funciones Starter incluidas.")
+                    : (lang==="en"?"Unlimited members · All Pro features included.":"Miembros ilimitados · Todas las funciones Pro incluidas.")}
+                </div>
+              </div>
+              {plan==="trial"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0,alignItems:"flex-end"}}>
+                  <div style={{fontSize:10,color:TEXT2}}>{lang==="en"?"Users on plan":"Usuarios en plan"}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:TEXT}}>{users.length} / 3</div>
+                  <div style={{width:80,height:5,background:BDR,borderRadius:99,overflow:"hidden"}}>
+                    <div style={{width:`${Math.min(users.length/3*100,100)}%`,height:"100%",background:users.length>=3?ACCENT:"#378ADD",borderRadius:99}}/>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Tier cards */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:12}}>
+              {TIERS.map(tier=>{
+                const isCurrent = plan===tier.id;
+                return (
+                  <div key={tier.id} style={{background:SURF,border:`2px solid ${isCurrent?tier.color:BDR}`,borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
+                    {/* Tier header */}
+                    <div style={{padding:"16px 18px 14px",background:isCurrent?tier.bg:"transparent",borderBottom:`1px solid ${BDR}`}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                        <span style={{fontSize:16,fontWeight:800,color:tier.color}}>{tier.name}</span>
+                        {isCurrent&&<span style={{fontSize:9,background:tier.color,color:"#fff",padding:"2px 8px",borderRadius:99,fontWeight:700}}>{lang==="en"?"YOUR PLAN":"TU PLAN"}</span>}
+                      </div>
+                      <div style={{display:"flex",alignItems:"baseline",gap:2,marginBottom:6}}>
+                        <span style={{fontSize:28,fontWeight:800,color:TEXT}}>{tier.price}</span>
+                        <span style={{fontSize:12,color:TEXT2}}>{tier.period}</span>
+                      </div>
+                      <div style={{fontSize:11,color:TEXT2,lineHeight:1.4}}>{tier.tagline}</div>
+                    </div>
+                    {/* Features */}
+                    <div style={{padding:"14px 18px",flex:1,display:"flex",flexDirection:"column",gap:8}}>
+                      {tier.features.map((f,i)=>{
+                        const isComingSoon = f.includes("coming soon") || f.includes("próximamente");
+                        return (
+                          <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:11,color:isComingSoon?TEXT2:TEXT}}>
+                            <i className={isComingSoon?"ti ti-clock":"ti ti-check"} style={{color:isComingSoon?TEXT2:tier.color,fontSize:13,marginTop:1,flexShrink:0}}/>
+                            <span style={{lineHeight:1.4,fontStyle:isComingSoon?"italic":"normal"}}>{f}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* CTA */}
+                    <div style={{padding:"12px 18px",borderTop:`1px solid ${BDR}`}}>
+                      {isCurrent
+                        ? <div style={{fontSize:11,color:TEXT2,textAlign:"center",padding:"6px 0"}}>
+                            <i className="ti ti-check" style={{color:FC_OK,marginRight:4}}/>
+                            {lang==="en"?"This is your current plan":"Este es tu plan actual"}
+                          </div>
+                        : <button
+                            style={{width:"100%",padding:"9px 0",borderRadius:8,background:tier.color,color:"#fff",border:"none",cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}
+                            onClick={()=>alert(lang==="en"?"Payment coming soon! Contact us at hello@chefcost.app to upgrade.":"¡Pago próximamente! Contáctanos en hello@chefcost.app para mejorar tu plan.")}
+                          >
+                            <i className="ti ti-arrow-up-circle"/>
+                            {lang==="en"?`Upgrade to ${tier.name}`:`Mejorar a ${tier.name}`}
+                          </button>
+                      }
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* KDS teaser */}
+            <div style={{...g.card,padding:16,display:"flex",alignItems:"center",gap:14,background:"rgba(95,95,95,0.03)"}}>
+              <div style={{width:40,height:40,borderRadius:10,background:"rgba(95,95,95,0.08)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <i className="ti ti-device-desktop" style={{fontSize:20,color:TEXT2}}/>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+                  <span style={{fontSize:13,fontWeight:700,color:TEXT}}>{lang==="en"?"Kitchen Display System (KDS)":"Sistema de Pantalla de Cocina (KDS)"}</span>
+                  <span style={{fontSize:9,background:"rgba(95,95,95,0.12)",color:TEXT2,padding:"2px 7px",borderRadius:99,fontWeight:700}}>{lang==="en"?"COMING SOON":"PRÓXIMAMENTE"}</span>
+                </div>
+                <div style={{fontSize:11,color:TEXT2,lineHeight:1.5}}>
+                  {lang==="en"
+                    ? "Connect ChefCost to your POS system. Send orders to the kitchen screen in real time, with food cost displayed per ticket."
+                    : "Conecta ChefCost a tu sistema de POS. Envía órdenes a la pantalla de cocina en tiempo real, con el costo del plato por ticket."}
+                </div>
+              </div>
+              <button style={{...g.btnS,flexShrink:0,fontSize:11}} onClick={()=>alert(lang==="en"?"We'll notify you when KDS is ready!":"¡Te avisamos cuando el KDS esté listo!")}>
+                <i className="ti ti-bell"/>{lang==="en"?"Notify me":"Avisarme"}
+              </button>
+            </div>
+
+            {/* Contact footnote */}
+            <div style={{fontSize:11,color:TEXT2,textAlign:"center",paddingBottom:4}}>
+              {lang==="en"
+                ? <>Questions about your plan? <b>hello@chefcost.app</b></>
+                : <>¿Preguntas sobre tu plan? <b>hello@chefcost.app</b></>}
+            </div>
+          </div>
+        );
+      })()}
+
       {(editU||addNew)&&<UserModal user={editU} isNew={addNew} onSave={saveUser} onClose={()=>{setEd(null);setAN(false);}} MODS={MODS} lang={lang}/>}
     </div>
   );
@@ -3982,6 +4131,7 @@ export default function App() {
   const [shoppingSubmitted, setShoppingSubmitted] = useState(false);
   const [shoppingSubmittedBy, setShoppingSubmittedBy] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
+  const [plan, setPlan] = useState("trial"); // "trial" | "starter" | "pro"
   const [page,        setPage]        = useState("dashboard");
   const [dbLoading,   setDbLoading]   = useState(true);
   const [dbError,     setDbError]     = useState(null);
@@ -4031,10 +4181,11 @@ export default function App() {
           setShoppingSubmitted(subRes.data.shopping_submitted||false);
           setShoppingSubmittedBy(subRes.data.shopping_submitted_by||"");
         }
-        // Load restaurant name
-        const restRes = await supabase.from("restaurants").select("name").eq("id", rid).single();
+        // Load restaurant name + plan
+        const restRes = await supabase.from("restaurants").select("name,plan").eq("id", rid).single();
         if (!restRes.error && restRes.data) {
           setRestaurantName(restRes.data.name || "");
+          setPlan(restRes.data.plan || "trial");
         }
       } catch (e) {
         setDbError(e.message || String(e));
@@ -4053,7 +4204,7 @@ export default function App() {
   const canAccess = (id) => !currentUser ? false : currentUser.role==="admin" ? true : !!currentUser.permissions[id];
   const canEdit   = (id) => !currentUser ? false : currentUser.role==="admin" ? true : currentUser.permissions[id]==="edit";
 
-  const ctx = { currentUser, setUser, users, setUsers, ingredients, setIngredients, recipes, setRecipes, invoices, setInvoices, lang, setLang, mainSupplier, setMainSupplier, orderDays, setOrderDays, pendingShopping, setPendingShopping, setPage, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, restaurantName };
+  const ctx = { currentUser, setUser, users, setUsers, ingredients, setIngredients, recipes, setRecipes, invoices, setInvoices, lang, setLang, mainSupplier, setMainSupplier, orderDays, setOrderDays, pendingShopping, setPendingShopping, setPage, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, restaurantName, plan, setPlan };
 
   const PAGES = { dashboard:<Dashboard/>, ingredients:<Ingredients/>, recipes:<Recipes/>, invoices:<Invoices/>, inventory:<Inventory/>, wastelog:<WasteLog/>, shopping:<ShoppingList/>, settings:<Settings/> };
   const visibleNav = [...NAV.filter(n=>canAccess(n.id)), { id:"settings", icon:"ti-settings", es:"Configuración", en:"Settings" }];
