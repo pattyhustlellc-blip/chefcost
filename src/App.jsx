@@ -410,7 +410,7 @@ function Register({ onBack }) {
 
   const logo = (
     <div style={{ textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
-      <img src="/knives-logo.png" alt="ChefCost" style={{ width:100, height:100, objectFit:"contain", display:"block" }}/>
+      <img src={LOGO_URL} alt="ChefCost" style={{ width:100, height:100, objectFit:"contain", display:"block" }}/>
       <div style={{ fontSize:20, fontWeight:800, letterSpacing:1, color:TEXT }}>CHEFCOST</div>
       <div style={{ fontSize:10, fontWeight:600, letterSpacing:3, color:TEXT2, textTransform:"uppercase", marginTop:-6 }}>Food Cost Manager</div>
     </div>
@@ -767,7 +767,7 @@ function Login() {
       <div style={{ width:"100%", maxWidth:400, display:"flex", flexDirection:"column", gap:20 }}>
 
         <div style={{ textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
-          <img src="/knives-logo.png" alt="ChefCost" style={{ width:120, height:120, objectFit:"contain", display:"block" }}/>
+          <img src={LOGO_URL} alt="ChefCost" style={{ width:120, height:120, objectFit:"contain", display:"block" }}/>
           <div style={{ fontSize:20, fontWeight:800, letterSpacing:1, color:TEXT }}>CHEFCOST</div>
           <div style={{ fontSize:10, fontWeight:600, letterSpacing:3, color:TEXT2, textTransform:"uppercase", marginTop:-6 }}>Food Cost Manager</div>
         </div>
