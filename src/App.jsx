@@ -1855,7 +1855,9 @@ function Recipes() {
 
   useEffect(() => {
     async function loadCats() {
-      const { data, error } = await supabase.from("recipe_categories").select("*");
+      const rid = currentUser?.restaurant_id;
+      if (!rid) return;
+      const { data, error } = await supabase.from("recipe_categories").select("*").eq("restaurant_id", rid);
       if (!error && data && data.length > 0) {
         setCats(prev => {
           const merged = [...prev];
@@ -1865,7 +1867,7 @@ function Recipes() {
       }
     }
     loadCats();
-  }, []);
+  }, [currentUser?.restaurant_id]);
 
   const filteredByType = recipes.filter(r => (r.recipe_type||"plate") === recType);
   const filtered = filteredByType
