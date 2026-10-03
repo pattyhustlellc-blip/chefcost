@@ -1299,6 +1299,7 @@ function Ingredients() {
         </select>
         <button style={g.btnP} onClick={()=>setAN(true)}><i className="ti ti-plus"/>{t("add",lang)}</button>
         <button style={{...g.btnS,background:"rgba(239,159,39,0.1)",color:"#EF9F27",border:"1px solid rgba(239,159,39,0.3)"}} onClick={detectDuplicates}><i className="ti ti-copy"/>{lang==="en"?"Detect duplicates":"Detectar duplicados"}</button>
+        <button style={{...g.btnS,background:"rgba(34,197,94,0.08)",color:"#15803d",border:"1px solid rgba(34,197,94,0.3)"}} onClick={()=>exportIngredients(ingredients,lang)}><i className="ti ti-file-spreadsheet"/>{lang==="en"?"Excel":"Excel"}</button>
       </div>
 
       {showDups&&<div style={{...g.card,padding:16,display:"flex",flexDirection:"column",gap:12}}>
@@ -1437,6 +1438,74 @@ function IngModal({ item, onSave, onClose, isNew, lang }) {
 }
 
 // ─── RECIPES ─────────────────────────────────────────────────────────────────
+// ─── EXCEL EXPORT ────────────────────────────────────────────────────────────
+function exportExcel(rows, sheetName, filename) {
+  // Dynamically load SheetJS from CDN (only once)
+  function doExport(XLSX) {
+    const ws = XLSX.utils.json_to_sheet(rows);
+    // Auto column widths
+    const cols = Object.keys(rows[0]||{}).map(k => ({ wch: Math.max(k.length, ...rows.map(r=>String(r[k]||"").length)) + 2 }));
+    ws["!cols"] = cols;
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, filename);
+  }
+  if (window.XLSX) { doExport(window.XLSX); return; }
+  const script = document.createElement("script");
+  script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+  script.onload = () => doExport(window.XLSX);
+  script.onerror = () => alert("Could not load Excel library. Check your connection.");
+  document.head.appendChild(script);
+}
+
+function exportIngredients(ingredients, lang) {
+  if (!ingredients.length) return;
+  const rows = ingredients.map(ing => ({
+    [lang==="en"?"Name":"Nombre"]:               ing.name,
+    [lang==="en"?"Category":"Categoría"]:        ing.category,
+    [lang==="en"?"Supplier":"Proveedor"]:        ing.supplier || "",
+    [lang==="en"?"Purchase unit":"Unidad compra"]: ing.unit_purchase,
+    [lang==="en"?"Use unit":"Unidad uso"]:       ing.unit_use,
+    [lang==="en"?"Price":"Precio"]:              parseFloat(ing.price)||0,
+    [lang==="en"?"Prev price":"Precio anterior"]: parseFloat(ing.prev_price)||0,
+    [lang==="en"?"Pack size":"Tamaño paquete"]:  ing.pack_size || "",
+    [lang==="en"?"Stock":"Stock"]:               parseFloat(ing.stock)||0,
+    [lang==="en"?"Min stock":"Stock mínimo"]:    parseFloat(ing.min_stock)||5,
+    [lang==="en"?"Inventory unit":"Unidad inventario"]: ing.unit_inventory || "",
+  }));
+  exportExcel(rows, lang==="en"?"Ingredients":"Ingredientes", `ChefCost_Ingredients_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function exportRecipes(recipes, ingredients, lang) {
+  if (!recipes.length) return;
+  const rows = recipes.map(r => {
+    const c = calcRecipe(r, ingredients, recipes);
+    const sell = r.selling_price ? parseFloat(r.selling_price) : null;
+    const hasSell = sell && sell > 0;
+    const fc = hasSell ? (c.cpp / sell) * 100 : null;
+    const sugTarget = r.target_margin ? r.target_margin/100 : 0.70;
+    const sugP = c.cpp > 0 ? c.cpp / (1 - sugTarget) : null;
+    const margin = hasSell ? ((sell - c.cpp)/sell)*100 : null;
+    return {
+      [lang==="en"?"Name":"Nombre"]:                   lang==="en"&&r.name_en ? r.name_en : r.name,
+      [lang==="en"?"Type":"Tipo"]:                      r.recipe_type==="prep"?(lang==="en"?"Prep":"Prep"):(lang==="en"?"Dish":"Platillo"),
+      [lang==="en"?"Category":"Categoría"]:             r.category || "",
+      [lang==="en"?"Portions":"Porciones"]:             parseFloat(r.portions)||1,
+      [lang==="en"?"Portion size":"Tamaño porción"]:   r.portion_size ? `${r.portion_size} ${r.portion_unit||""}` : "",
+      [lang==="en"?"Waste %":"Merma %"]:               parseFloat(r.waste_pct)||0,
+      [lang==="en"?"Total cost":"Costo total"]:         parseFloat(c.total.toFixed(4)),
+      [lang==="en"?"Cost/portion":"Costo/porción"]:     parseFloat(c.cpp.toFixed(4)),
+      [lang==="en"?"Sell price":"Precio venta"]:        hasSell ? parseFloat(sell.toFixed(2)) : "",
+      [lang==="en"?"Food cost %":"Food cost %"]:        fc !== null ? parseFloat(fc.toFixed(1)) : "",
+      [lang==="en"?"Suggested price":"Precio sugerido"]: sugP ? parseFloat(sugP.toFixed(2)) : "",
+      [lang==="en"?"Gross margin %":"Margen bruto %"]:  margin !== null ? parseFloat(margin.toFixed(1)) : "",
+      [lang==="en"?"Target margin %":"Margen objetivo %"]: r.target_margin ? parseFloat(r.target_margin) : 70,
+      [lang==="en"?"Ingredients count":"Cant. ingredientes"]: (r.ingredients||[]).length,
+    };
+  });
+  exportExcel(rows, lang==="en"?"Recipes":"Recetas", `ChefCost_Recipes_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 function printRecipe(recipe, ingredients, lang, allRecipes=[]) {
   const recName = (lang==="en" && recipe.name_en) ? recipe.name_en : recipe.name;
   const T = lang==="en" ? {
@@ -1778,6 +1847,7 @@ function Recipes() {
           <option value="margin">{t("sortMarginBest",lang)}</option>
           <option value="cost">{t("sortCostHigh",lang)}</option>
         </select>
+        <button style={{...g.btnS,background:"rgba(34,197,94,0.08)",color:"#15803d",border:"1px solid rgba(34,197,94,0.3)"}} onClick={()=>exportRecipes(recipes,ingredients,lang)}><i className="ti ti-file-spreadsheet"/>{lang==="en"?"Excel":"Excel"}</button>
         <button style={{...g.btnP,marginLeft:"auto"}} onClick={()=>setAN(true)}><i className="ti ti-plus"/>{t("newRecipe",lang)}</button>
       </div>
 
