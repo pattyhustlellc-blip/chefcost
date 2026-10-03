@@ -833,6 +833,13 @@ function Dashboard() {
   const priceUp  = ingredients.filter(i => i.price > i.prev_price);
   const critical = ingredients.filter(i => parseFloat(i.stock) <= (parseFloat(i.min_stock)||5));
   const avgCost  = menuDishes.length ? menuDishes.reduce((s,r)=>s+r.cpp,0)/menuDishes.length : 0;
+  // Dishes where actual food cost % exceeds target (default: target margin 70% → max food cost 30%)
+  const offTarget = menuDishes.filter(r => {
+    if (!r.selling_price || parseFloat(r.selling_price) <= 0 || r.cpp <= 0) return false;
+    const fc = (r.cpp / parseFloat(r.selling_price)) * 100;
+    const maxFc = r.target_margin ? (100 - r.target_margin) : 30;
+    return fc > maxFc;
+  });
   const topDish  = menuDishes.length ? [...menuDishes].sort((a,b)=>b.margin-a.margin)[0] : null;
   const sorted   = [...menuDishes].sort((a,b)=>b.margin-a.margin);
 
@@ -932,7 +939,7 @@ function Dashboard() {
             </div>
             {/* Unpriced recipes alert banner */}
             {unpriced.length > 0 && (
-              <div style={{ background:"rgba(200,49,43,0.05)", border:`1px solid rgba(200,49,43,0.25)`, borderRadius:10, padding:"10px 16px", display:"flex", alignItems:"center", gap:10 }} onClick={()=>setPage("recipes")}>
+              <div style={{ background:"rgba(200,49,43,0.05)", border:`1px solid rgba(200,49,43,0.25)`, borderRadius:10, padding:"10px 16px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={()=>setPage("recipes")}>
                 <i className="ti ti-tag-off" style={{ fontSize:16, color:ACCENT, flexShrink:0 }}/>
                 <div style={{ flex:1 }}>
                   <span style={{ fontSize:13, fontWeight:600, color:ACCENT }}>
@@ -956,6 +963,61 @@ function Dashboard() {
                     ) : null;
                   })}
                   {unpriced.length > 2 && <span style={{ fontSize:10, color:TEXT2 }}>+{unpriced.length-2} {lang==="en"?"more":"más"}</span>}
+                </div>
+                <i className="ti ti-chevron-right" style={{ fontSize:14, color:ACCENT }}/>
+              </div>
+            )}
+
+            {/* Stock critical alert banner */}
+            {critical.length > 0 && (
+              <div style={{ background:"rgba(239,159,39,0.06)", border:"1px solid rgba(239,159,39,0.35)", borderRadius:10, padding:"10px 16px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={()=>setPage("ingredients")}>
+                <i className="ti ti-alert-triangle" style={{ fontSize:16, color:"#EF9F27", flexShrink:0 }}/>
+                <div style={{ flex:1 }}>
+                  <span style={{ fontSize:13, fontWeight:600, color:"#b07a00" }}>
+                    {critical.length} {lang==="en" ? (critical.length===1?"ingredient is":"ingredients are") : (critical.length===1?"ingrediente en":"ingredientes en")} {lang==="en"?"low stock":"stock crítico"}
+                  </span>
+                  <span style={{ fontSize:11, color:TEXT2, marginLeft:8 }}>
+                    {lang==="en"?"Restock soon to avoid running out":"Reabastece pronto para no quedarte sin"}
+                  </span>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:2, alignItems:"flex-end" }}>
+                  {critical.slice(0,2).map(ing => (
+                    <span key={ing.id} style={{ fontSize:11, color:TEXT2 }}>
+                      <b style={{ color:TEXT }}>{ing.name}</b>
+                      <span style={{ color:"#b07a00", marginLeft:4 }}>{parseFloat(ing.stock).toFixed(1)} {ing.unit_inventory||ing.unit_use}</span>
+                    </span>
+                  ))}
+                  {critical.length > 2 && <span style={{ fontSize:10, color:TEXT2 }}>+{critical.length-2} {lang==="en"?"more":"más"}</span>}
+                </div>
+                <i className="ti ti-chevron-right" style={{ fontSize:14, color:"#EF9F27" }}/>
+              </div>
+            )}
+
+            {/* Food cost target alert banner */}
+            {offTarget.length > 0 && (
+              <div style={{ background:"rgba(200,49,43,0.04)", border:`1px solid rgba(200,49,43,0.2)`, borderRadius:10, padding:"10px 16px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={()=>setPage("recipes")}>
+                <i className="ti ti-percentage" style={{ fontSize:16, color:ACCENT, flexShrink:0 }}/>
+                <div style={{ flex:1 }}>
+                  <span style={{ fontSize:13, fontWeight:600, color:ACCENT }}>
+                    {offTarget.length} {lang==="en" ? (offTarget.length===1?"dish exceeds":"dishes exceed") : (offTarget.length===1?"plato supera":"platos superan")} {lang==="en"?"food cost target":"el objetivo de costo"}
+                  </span>
+                  <span style={{ fontSize:11, color:TEXT2, marginLeft:8 }}>
+                    {lang==="en"?"Adjust price or reduce ingredient cost":"Ajusta el precio o reduce el costo"}
+                  </span>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:2, alignItems:"flex-end" }}>
+                  {offTarget.slice(0,2).map(r => {
+                    const fc = (r.cpp / parseFloat(r.selling_price)) * 100;
+                    const maxFc = r.target_margin ? (100 - r.target_margin) : 30;
+                    return (
+                      <span key={r.id} style={{ fontSize:11, color:TEXT2 }}>
+                        <b style={{ color:TEXT }}>{lang==="en"&&r.name_en?r.name_en:r.name}</b>
+                        <span style={{ color:ACCENT, marginLeft:4 }}>{fc.toFixed(1)}%</span>
+                        <span style={{ color:TEXT2, fontSize:9 }}> vs {maxFc}% {lang==="en"?"target":"meta"}</span>
+                      </span>
+                    );
+                  })}
+                  {offTarget.length > 2 && <span style={{ fontSize:10, color:TEXT2 }}>+{offTarget.length-2} {lang==="en"?"more":"más"}</span>}
                 </div>
                 <i className="ti ti-chevron-right" style={{ fontSize:14, color:ACCENT }}/>
               </div>
@@ -1158,6 +1220,39 @@ function Dashboard() {
 }
 
 // ─── INGREDIENTS ─────────────────────────────────────────────────────────────
+function PriceSparkline({ ingredient }) {
+  // Build points from price_history JSON + current price
+  let history = [];
+  try { history = JSON.parse(ingredient.price_history||"[]"); } catch(e) { history=[]; }
+  if (!Array.isArray(history)) history = [];
+  // Always include prev_price and current price as minimum data points
+  const prevP = parseFloat(ingredient.prev_price)||0;
+  const curP  = parseFloat(ingredient.price)||0;
+  let points = [...history.map(h=>parseFloat(h.price)||0)];
+  if (points.length === 0 && prevP > 0 && prevP !== curP) points = [prevP];
+  points.push(curP);
+  // Need at least 2 points to draw a line
+  if (points.length < 2) {
+    return <span style={{fontSize:10,color:TEXT2}}>—</span>;
+  }
+  const W=56, H=22, pad=2;
+  const min=Math.min(...points), max=Math.max(...points);
+  const range=max-min||curP*0.01||1; // avoid div/0
+  const xs = points.map((_,i)=>pad+(i/(points.length-1))*(W-pad*2));
+  const ys = points.map(p=>H-pad-(p-min)/range*(H-pad*2));
+  const pathD = xs.map((x,i)=>`${i===0?"M":"L"}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(" ");
+  const trend = points[points.length-1] > points[0];
+  const same  = points[points.length-1] === points[0];
+  const lineColor = same?"#aaa": trend?FC_ERR:FC_OK; // red=up (bad for cost), green=down (good)
+  const lastX = xs[xs.length-1], lastY = ys[ys.length-1];
+  return (
+    <svg width={W} height={H} style={{display:"block",overflow:"visible"}}>
+      <path d={pathD} fill="none" stroke={lineColor} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round"/>
+      <circle cx={lastX} cy={lastY} r={2.5} fill={lineColor}/>
+    </svg>
+  );
+}
+
 function Ingredients() {
   const { ingredients, setIngredients, lang, currentUser } = useApp();
   const [search, setSrc] = useState("");
@@ -1247,16 +1342,42 @@ function Ingredients() {
   async function save(u) {
     const rid = currentUser?.restaurant_id;
     const isExisting = ingredients.some(i=>i.id===u.id);
-    const clean = { ...u, restaurant_id: rid, price:parseFloat(u.price)||0, prev_price:parseFloat(u.prev_price)||0, pack_size:u.pack_size?parseFloat(u.pack_size):null, stock:parseFloat(u.stock)||0, min_stock:parseFloat(u.min_stock)||5 };
+    const newPrice = parseFloat(u.price)||0;
+    // Build price history: append new price if it changed
+    let priceHistory = [];
+    if (isExisting) {
+      const existing = ingredients.find(i=>i.id===u.id);
+      try { priceHistory = JSON.parse(existing?.price_history||"[]"); } catch(e) { priceHistory=[]; }
+      if (!Array.isArray(priceHistory)) priceHistory = [];
+      const lastEntry = priceHistory[priceHistory.length-1];
+      const oldPrice = parseFloat(existing?.price)||0;
+      if (oldPrice > 0 && oldPrice !== newPrice) {
+        priceHistory = [...priceHistory, { date: new Date().toISOString().slice(0,10), price: oldPrice }];
+        if (priceHistory.length > 12) priceHistory = priceHistory.slice(-12); // keep last 12 entries
+      }
+    } else {
+      if (newPrice > 0) priceHistory = [{ date: new Date().toISOString().slice(0,10), price: newPrice }];
+    }
+    const clean = { ...u, restaurant_id: rid, price:newPrice, prev_price:parseFloat(u.prev_price)||0, pack_size:u.pack_size?parseFloat(u.pack_size):null, stock:parseFloat(u.stock)||0, min_stock:parseFloat(u.min_stock)||5, price_history: JSON.stringify(priceHistory) };
     if (isExisting) {
       const { id, ...updateFields } = clean;
-      const { error } = await supabase.from("ingredients").update(updateFields).eq("id", id);
-      if (error) { alert("Error guardando: "+error.message); return; }
+      let { error } = await supabase.from("ingredients").update(updateFields).eq("id", id);
+      if (error && error.message && error.message.includes("price_history")) {
+        // Column doesn't exist yet — save without it
+        const { price_history: _ph, ...safeFields } = updateFields;
+        const res2 = await supabase.from("ingredients").update(safeFields).eq("id", id);
+        if (res2.error) { alert("Error guardando: "+res2.error.message); return; }
+      } else if (error) { alert("Error guardando: "+error.message); return; }
       setIngredients(prev => prev.map(i => i.id===u.id ? clean : i));
     } else {
       const { id, ...insertFields } = clean;
-      const { data, error } = await supabase.from("ingredients").insert(insertFields).select().single();
-      if (error) { alert("Error guardando: "+error.message); return; }
+      let { data, error } = await supabase.from("ingredients").insert(insertFields).select().single();
+      if (error && error.message && error.message.includes("price_history")) {
+        const { price_history: _ph, ...safeFields } = insertFields;
+        const res2 = await supabase.from("ingredients").insert(safeFields).select().single();
+        if (res2.error) { alert("Error guardando: "+res2.error.message); return; }
+        data = res2.data;
+      } else if (error) { alert("Error guardando: "+error.message); return; }
       setIngredients(prev => [...prev, data]);
     }
     setEd(null); setAN(false);
@@ -1351,6 +1472,7 @@ function Ingredients() {
                 <th style={g.th}>{t("name",lang)}</th><th style={g.th}>{t("supplier",lang)}</th>
                 <th style={g.th}>{t("unitPurchase",lang)}</th><th style={g.th}>{t("unitUse",lang)}</th><th style={g.th}>{t("unitInventory",lang)}</th>
                 <th style={g.th}>{t("price",lang)}</th><th style={g.th}>{t("previous",lang)}</th><th style={g.th}>{t("variation",lang)}</th>
+                <th style={{...g.th,minWidth:66}}>{lang==="en"?"Trend":"Tendencia"}</th>
                 <th style={g.th}>{t("stock",lang)}</th><th style={g.th}>{t("actions",lang)}</th>
               </tr></thead>
               <tbody>
@@ -1368,6 +1490,7 @@ function Ingredients() {
                       <td style={{...g.td,fontWeight:700,color:ACCENT}}>${ing.price.toFixed(2)}</td>
                       <td style={{...g.td,color:TEXT2}}>${ing.prev_price.toFixed(2)}</td>
                       <td style={g.td}><span style={g.pp(d.up,d.same)}>{d.same?"—":<>{d.up?"+":"-"}{d.pct}%</>}</span></td>
+                      <td style={{...g.td,paddingTop:4,paddingBottom:4}}><PriceSparkline ingredient={ing}/></td>
                       <td style={g.td}><span style={g.badge(st)}>{ing.stock} {ing.unit_inventory}</span></td>
                       <td style={g.td}>
                         <div style={{display:"flex",gap:5}}>
