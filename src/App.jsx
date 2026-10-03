@@ -3536,22 +3536,96 @@ function Settings() {
         </div>
       </div>}
 
-      {tab==="users"&&currentUser.role==="admin"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+      {tab==="users"&&currentUser.role==="admin"&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{fontSize:13,fontWeight:600}}>{t("users",lang)} ({users.length})</span>
-          <button style={g.btnP} onClick={()=>setAN(true)}><i className="ti ti-plus"/>{t("add",lang)}</button>
-        </div>
-        {users.map(u=>(
-          <div key={u.id} style={{...g.card,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
-            <div style={g.avt(ROLE_COLORS[u.role]||TEXT2)}>{u.avatar}</div>
-            <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{u.name}</div><div style={{fontSize:11,color:TEXT2}}>{u.email}</div></div>
-            <span style={{fontSize:10,background:`${ROLE_COLORS[u.role]}22`,color:ROLE_COLORS[u.role],padding:"2px 8px",borderRadius:99,fontWeight:700}}>{u.role}</span>
-            <div style={{display:"flex",gap:6}}>
-              <button style={g.btnI} onClick={()=>setEd(u)}><i className="ti ti-pencil" style={{fontSize:12}}/>{t("edit",lang)}</button>
-              {u.id!==currentUser.id&&<button style={g.btnD} onClick={()=>removeUser(u.id)}><i className="ti ti-trash" style={{fontSize:12}}/>{t("delete",lang)}</button>}
-            </div>
+          <div>
+            <div style={{fontSize:14,fontWeight:700}}>{lang==="en"?"Team":"Equipo"} <span style={{fontSize:12,color:TEXT2,fontWeight:400}}>({users.length} {lang==="en"?"members":"miembros"})</span></div>
+            <div style={{fontSize:11,color:TEXT2,marginTop:2}}>{lang==="en"?"Manage who has access to this restaurant's account":"Gestiona quién tiene acceso a la cuenta del restaurante"}</div>
           </div>
-        ))}
+          <button style={g.btnP} onClick={()=>setAN(true)}><i className="ti ti-user-plus"/>{lang==="en"?"Add member":"Añadir miembro"}</button>
+        </div>
+
+        {/* Info banner — how to share access */}
+        <div style={{background:"rgba(55,138,221,0.07)",border:"1px solid rgba(55,138,221,0.2)",borderRadius:10,padding:"10px 14px",display:"flex",gap:10,alignItems:"flex-start"}}>
+          <i className="ti ti-info-circle" style={{color:"#378ADD",fontSize:16,flexShrink:0,marginTop:1}}/>
+          <div style={{fontSize:11,color:"#1a4a7a",lineHeight:1.6}}>
+            {lang==="en"
+              ? <><b>To give someone access:</b> create their account here, then share their email and password. They log in at the same URL you use.</>
+              : <><b>Para dar acceso:</b> crea la cuenta aquí, luego comparte el email y contraseña con esa persona. Inician sesión en la misma URL que usas tú.</>
+            }
+          </div>
+        </div>
+
+        {/* Role legend */}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {[
+            {role:"admin",icon:"ti-shield-check",desc:lang==="en"?"Full access, can manage team":"Acceso total, gestiona equipo"},
+            {role:"chef",icon:"ti-tools-kitchen-2",desc:lang==="en"?"Recipes & ingredients":"Recetas e ingredientes"},
+            {role:"employee",icon:"ti-user",desc:lang==="en"?"Limited, set per module":"Limitado, configurable por módulo"},
+          ].map(r=>(
+            <div key={r.role} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:`${ROLE_COLORS[r.role]}11`,border:`1px solid ${ROLE_COLORS[r.role]}33`,borderRadius:8,fontSize:10}}>
+              <i className={`ti ${r.icon}`} style={{color:ROLE_COLORS[r.role]}}/>
+              <span style={{fontWeight:700,color:ROLE_COLORS[r.role],textTransform:"capitalize"}}>{r.role}</span>
+              <span style={{color:TEXT2}}>— {r.desc}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* User cards */}
+        {users.map(u=>{
+          const isMe = u.id===currentUser.id;
+          const permEntries = u.role==="admin" ? [] : Object.entries(u.permissions||{}).filter(([,v])=>v);
+          const permIcons = {dashboard:"ti-layout-dashboard",ingredients:"ti-basket",recipes:"ti-book",invoices:"ti-receipt",inventory:"ti-box",wastelog:"ti-trash",shopping:"ti-shopping-cart"};
+          return (
+            <div key={u.id} style={{...g.card,padding:16,display:"flex",flexDirection:"column",gap:12}}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                {/* Avatar */}
+                <div style={{...g.avt(ROLE_COLORS[u.role]||TEXT2),width:44,height:44,fontSize:15,flexShrink:0}}>{u.avatar||u.name.slice(0,2).toUpperCase()}</div>
+                {/* Name / email */}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                    <span style={{fontSize:13,fontWeight:700}}>{u.name}</span>
+                    {isMe&&<span style={{fontSize:9,background:"rgba(200,49,43,0.10)",color:ACCENT,padding:"1px 6px",borderRadius:99,fontWeight:700}}>{lang==="en"?"YOU":"TÚ"}</span>}
+                    <span style={{fontSize:10,background:`${ROLE_COLORS[u.role]||TEXT2}18`,color:ROLE_COLORS[u.role]||TEXT2,padding:"2px 8px",borderRadius:99,fontWeight:700,textTransform:"capitalize"}}>
+                      <i className={`ti ${u.role==="admin"?"ti-shield-check":u.role==="chef"?"ti-tools-kitchen-2":"ti-user"}`} style={{marginRight:3,fontSize:9}}/>{u.role}
+                    </span>
+                  </div>
+                  <div style={{fontSize:11,color:TEXT2,marginTop:2}}>{u.email}</div>
+                </div>
+                {/* Action buttons */}
+                <div style={{display:"flex",gap:6,flexShrink:0}}>
+                  <button style={g.btnI} onClick={()=>setEd(u)}><i className="ti ti-pencil" style={{fontSize:12}}/>{t("edit",lang)}</button>
+                  {!isMe&&<button style={g.btnD} onClick={()=>{if(window.confirm(lang==="en"?`Remove ${u.name} from the team?`:`¿Eliminar a ${u.name} del equipo?`))removeUser(u.id)}}><i className="ti ti-trash" style={{fontSize:12}}/></button>}
+                </div>
+              </div>
+              {/* Permissions row */}
+              {u.role==="admin"
+                ? <div style={{display:"flex",alignItems:"center",gap:6,fontSize:10,color:ACCENT,background:"rgba(200,49,43,0.04)",borderRadius:8,padding:"6px 10px"}}>
+                    <i className="ti ti-shield-check"/>{lang==="en"?"Full access to all modules":"Acceso completo a todos los módulos"}
+                  </div>
+                : permEntries.length>0
+                  ? <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                      {permEntries.map(([mod,val])=>(
+                        <span key={mod} style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:9,padding:"3px 7px",borderRadius:6,background:val==="edit"?"rgba(200,49,43,0.07)":"rgba(55,138,221,0.07)",color:val==="edit"?ACCENT:"#378ADD",border:`1px solid ${val==="edit"?"rgba(200,49,43,0.2)":"rgba(55,138,221,0.2)"}`,fontWeight:600}}>
+                          <i className={`ti ${permIcons[mod]||"ti-circle"}`} style={{fontSize:9}}/>
+                          {mod}
+                          <span style={{opacity:0.7}}>· {val==="edit"?(lang==="en"?"edit":"editar"):(lang==="en"?"view":"ver")}</span>
+                        </span>
+                      ))}
+                    </div>
+                  : <div style={{fontSize:10,color:TEXT2,fontStyle:"italic"}}>{lang==="en"?"No module access configured":"Sin acceso a módulos configurado"}</div>
+              }
+            </div>
+          );
+        })}
+
+        {users.length===0&&<div style={{...g.card,padding:40,textAlign:"center"}}>
+          <i className="ti ti-users" style={{fontSize:40,color:TEXT2,display:"block",marginBottom:12}}/>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:6}}>{lang==="en"?"Just you for now":"Solo tú por ahora"}</div>
+          <div style={{fontSize:11,color:TEXT2,marginBottom:16}}>{lang==="en"?"Add chefs or employees to collaborate on this account":"Añade chefs o empleados para colaborar en esta cuenta"}</div>
+          <button style={g.btnP} onClick={()=>setAN(true)}><i className="ti ti-user-plus"/>{lang==="en"?"Add first member":"Añadir primer miembro"}</button>
+        </div>}
       </div>}
       {(editU||addNew)&&<UserModal user={editU} isNew={addNew} onSave={saveUser} onClose={()=>{setEd(null);setAN(false);}} MODS={MODS} lang={lang}/>}
     </div>
@@ -3559,36 +3633,122 @@ function Settings() {
 }
 
 function UserModal({user:init,isNew,onSave,onClose,MODS,lang}) {
-  const blank={id:Date.now(),name:"",email:"",password:"",role:"employee",avatar:"",permissions:{dashboard:"view",ingredients:"view",recipes:"view",invoices:null,inventory:"edit",settings:null}};
+  const blank={id:Date.now(),name:"",email:"",password:"",role:"employee",avatar:"",permissions:{dashboard:"view",ingredients:"view",recipes:"view",invoices:null,inventory:"edit",wastelog:null,shopping:null}};
   const [f,setF]=useState(init||blank);
   const [np,setNP]=useState("");
+  const [showPwd,setShowPwd]=useState(false);
+  const [err,setErr]=useState("");
   const sf=(k,v)=>setF(x=>({...x,[k]:v}));
   const sp=(mod,val)=>setF(x=>({...x,permissions:{...x.permissions,[mod]:val}}));
-  function save(){const u={...f};if(np.trim())u.password=np;if(!u.avatar)u.avatar=u.name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);onSave(u);}
+  // cycle through none→view→edit
+  const cyclePerms=(mod)=>{
+    const cur=f.permissions[mod]||null;
+    const next=cur===null?"view":cur==="view"?"edit":null;
+    sp(mod,next);
+  };
+  function save(){
+    setErr("");
+    if(!f.name.trim()){setErr(lang==="en"?"Name is required":"El nombre es requerido");return;}
+    if(!f.email.trim()){setErr(lang==="en"?"Email is required":"El email es requerido");return;}
+    if(isNew&&!f.password.trim()){setErr(lang==="en"?"Password is required":"La contraseña es requerida");return;}
+    if(isNew&&f.password.length<6){setErr(lang==="en"?"Password must be at least 6 characters":"La contraseña debe tener al menos 6 caracteres");return;}
+    const u={...f};
+    if(!isNew&&np.trim()){u.password=np;}
+    if(!u.avatar)u.avatar=u.name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
+    onSave(u);
+  }
+  const ROLE_PRESETS={
+    chef:{dashboard:"view",ingredients:"edit",recipes:"edit",invoices:"view",inventory:"edit",wastelog:"edit",shopping:"view"},
+    employee:{dashboard:"view",ingredients:"view",recipes:"view",invoices:null,inventory:"edit",wastelog:"edit",shopping:"view"},
+  };
+  const permState=(mod)=>f.permissions[mod]||null;
+  const permLabel=(v)=>v===null?(lang==="en"?"No access":"Sin acceso"):v==="view"?(lang==="en"?"View only":"Solo ver"):(lang==="en"?"View & edit":"Ver y editar");
+  const permColor=(v)=>v===null?TEXT2:v==="view"?"#378ADD":ACCENT;
+  const permBg=(v)=>v===null?"transparent":v==="view"?"rgba(55,138,221,0.10)":"rgba(200,49,43,0.08)";
+  const permIcon=(v)=>v===null?"ti-ban":v==="view"?"ti-eye":"ti-pencil";
   return (
     <div style={g.modal}>
-      <div style={g.mbox} onClick={e=>e.stopPropagation()}>
-        <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:14,fontWeight:700}}>{isNew?t("newUser",lang):t("editUser",lang)}</span><button style={g.btnS} onClick={onClose}><i className="ti ti-x"/></button></div>
-        <div style={{display:"flex",gap:10}}>
-          <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("name",lang)}</label><input style={g.inp} value={f.name} onChange={e=>sf("name",e.target.value)}/></div>
-          <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("email",lang)}</label><input style={g.inp} type="email" value={f.email} onChange={e=>sf("email",e.target.value)}/></div>
+      <div style={{...g.mbox,maxWidth:480}} onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{fontSize:14,fontWeight:700}}>{isNew?(lang==="en"?"Add team member":"Añadir miembro"):(lang==="en"?"Edit member":"Editar miembro")}</div>
+            {isNew&&<div style={{fontSize:11,color:TEXT2,marginTop:2}}>{lang==="en"?"They'll log in with these credentials at the same URL":"Usarán estas credenciales para entrar a la misma URL"}</div>}
+          </div>
+          <button style={g.btnS} onClick={onClose}><i className="ti ti-x"/></button>
         </div>
+
+        {/* Name & Email */}
         <div style={{display:"flex",gap:10}}>
-          <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{isNew?t("password",lang):t("newPassword",lang)}</label><input style={g.inp} type="password" placeholder="••••••••" value={isNew?f.password:np} onChange={e=>isNew?sf("password",e.target.value):setNP(e.target.value)}/></div>
-          <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("role",lang)}</label><select style={{...g.sel,width:"100%"}} value={f.role} onChange={e=>sf("role",e.target.value)}><option value="admin">Admin</option><option value="chef">Chef</option><option value="employee">{lang==="en"?"Employee":"Empleado"}</option></select></div>
+          <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}>
+            <label style={g.lbl}>{t("name",lang)}</label>
+            <input style={g.inp} value={f.name} placeholder={lang==="en"?"Full name":"Nombre completo"} onChange={e=>sf("name",e.target.value)}/>
+          </div>
+          <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}>
+            <label style={g.lbl}>{t("email",lang)}</label>
+            <input style={g.inp} type="email" value={f.email} placeholder="email@restaurante.com" onChange={e=>sf("email",e.target.value)}/>
+          </div>
         </div>
-        {f.role!=="admin"&&<div style={{background:SURF2,borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:8}}>
-          <div style={{fontSize:12,fontWeight:600}}><i className="ti ti-lock" style={{marginRight:6,color:ACCENT}}/>{t("modulePerms",lang)}</div>
-          {MODS.map(mod=>(
-            <div key={mod.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}><i className={`ti ${mod.icon}`} style={{color:TEXT2,fontSize:13}}/>{mod.label}</div>
-              <select style={{background:f.permissions[mod.id]==="edit"?"rgba(200,49,43,0.08)":f.permissions[mod.id]==="view"?"rgba(55,138,221,0.1)":SURF2,color:f.permissions[mod.id]==="edit"?ACCENT:f.permissions[mod.id]==="view"?"#378ADD":TEXT2,border:`1px solid ${f.permissions[mod.id]?"rgba(200,49,43,0.20)":BDR}`,borderRadius:6,padding:"4px 8px",fontSize:11,cursor:"pointer",outline:"none",fontWeight:600}} value={f.permissions[mod.id]||"none"} onChange={e=>sp(mod.id,e.target.value==="none"?null:e.target.value)}>
-                <option value="none">{t("noAccess",lang)}</option><option value="view">{t("viewOnly",lang)}</option><option value="edit">{t("viewEdit",lang)}</option>
-              </select>
+
+        {/* Password & Role */}
+        <div style={{display:"flex",gap:10}}>
+          <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}>
+            <label style={g.lbl}>{isNew?(lang==="en"?"Password":"Contraseña"):(lang==="en"?"New password (optional)":"Nueva contraseña (opcional)")}</label>
+            <div style={{position:"relative"}}>
+              <input style={{...g.inp,paddingRight:36}} type={showPwd?"text":"password"} placeholder="••••••••" value={isNew?f.password:np} onChange={e=>isNew?sf("password",e.target.value):setNP(e.target.value)}/>
+              <button type="button" style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:TEXT2,cursor:"pointer",padding:2}} onClick={()=>setShowPwd(p=>!p)}>
+                <i className={`ti ${showPwd?"ti-eye-off":"ti-eye"}`} style={{fontSize:13}}/>
+              </button>
             </div>
-          ))}
-        </div>}
-        {f.role==="admin"&&<div style={{background:"rgba(200,49,43,0.04)",border:"1px solid rgba(200,49,43,0.15)",borderRadius:8,padding:"10px 14px",fontSize:12,color:ACCENT}}><i className="ti ti-shield-check" style={{marginRight:6}}/>{t("adminFullAccess",lang)}</div>}
+          </div>
+          <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}>
+            <label style={g.lbl}>{t("role",lang)}</label>
+            <select style={{...g.sel,width:"100%"}} value={f.role} onChange={e=>{
+              const role=e.target.value;
+              sf("role",role);
+              if(ROLE_PRESETS[role])setF(x=>({...x,role,permissions:{...ROLE_PRESETS[role]}}));
+            }}>
+              <option value="admin">Admin</option>
+              <option value="chef">Chef</option>
+              <option value="employee">{lang==="en"?"Employee":"Empleado"}</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Permissions — toggle buttons */}
+        {f.role!=="admin"
+          ? <div style={{background:SURF2,borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:4}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <div style={{fontSize:12,fontWeight:600}}><i className="ti ti-lock" style={{marginRight:6,color:ACCENT}}/>{lang==="en"?"Module permissions":"Permisos por módulo"}</div>
+                <div style={{display:"flex",gap:4}}>
+                  {Object.keys(ROLE_PRESETS).map(r=>(
+                    <button key={r} style={{fontSize:9,padding:"3px 8px",borderRadius:6,border:`1px solid ${BDR}`,background:SURF,color:TEXT2,cursor:"pointer",fontWeight:600,textTransform:"capitalize"}} onClick={()=>setF(x=>({...x,permissions:{...ROLE_PRESETS[r]}}))}>{lang==="en"?`Use ${r} preset`:`Usar preset ${r}`}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{fontSize:10,color:TEXT2,marginBottom:4}}>{lang==="en"?"Click to cycle: No access → View → Edit":"Clic para cambiar: Sin acceso → Ver → Editar"}</div>
+              {MODS.map(mod=>{
+                const v=permState(mod.id);
+                return (
+                  <button key={mod.id} type="button" onClick={()=>cyclePerms(mod.id)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 10px",borderRadius:8,border:`1px solid ${v?`${permColor(v)}33`:BDR}`,background:permBg(v),cursor:"pointer",textAlign:"left"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
+                      <i className={`ti ${mod.icon}`} style={{color:v?permColor(v):TEXT2,fontSize:13,width:16,textAlign:"center"}}/>
+                      <span style={{color:v?TEXT:TEXT2,fontWeight:v?500:400}}>{mod.label}</span>
+                    </div>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:10,fontWeight:600,color:permColor(v),background:`${permColor(v)}15`,padding:"3px 8px",borderRadius:99}}>
+                      <i className={`ti ${permIcon(v)}`} style={{fontSize:9}}/>{permLabel(v)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          : <div style={{background:"rgba(200,49,43,0.04)",border:"1px solid rgba(200,49,43,0.15)",borderRadius:8,padding:"10px 14px",fontSize:12,color:ACCENT}}>
+              <i className="ti ti-shield-check" style={{marginRight:6}}/>{lang==="en"?"Admin has full access to all modules":"El admin tiene acceso completo a todos los módulos"}
+            </div>
+        }
+
+        {err&&<div style={{fontSize:11,color:FC_ERR,background:"rgba(196,43,28,0.06)",border:"1px solid rgba(196,43,28,0.2)",borderRadius:8,padding:"8px 12px"}}><i className="ti ti-alert-circle" style={{marginRight:6}}/>{err}</div>}
+
         <div style={{display:"flex",gap:10}}>
           <button style={{...g.btnP,flex:1,justifyContent:"center"}} onClick={save}><i className="ti ti-check"/>{t("save",lang)}</button>
           <button style={g.btnS} onClick={onClose}>{t("cancel",lang)}</button>
