@@ -4139,8 +4139,9 @@ export default function App() {
     try { return !!localStorage.getItem("chefcost_ob_" + (JSON.parse(localStorage.getItem("chefcost_user")||"{}").restaurant_id || "")); } catch(e) { return false; }
   });
 
-  // Load all data from Supabase on first mount
+  // Load all data from Supabase on first mount (only when logged in)
   useEffect(() => {
+    if (!currentUser) { setDbLoading(false); return; }
     async function loadAll() {
       try {
         const rid = currentUser?.restaurant_id;
