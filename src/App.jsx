@@ -3395,15 +3395,31 @@ function ShoppingList() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-  async function addItem() {
+  // Ingredientes en stock crítico que aún no están en la lista
+  const suggestions = ingredients.filter(ing => {
+    const stock = parseFloat(ing.stock) || 0;
+    const alert = parseFloat(ing.stock_alert) || 0;
+    if (alert <= 0 || stock > alert) return false;
+    return !items.some(it => it.name === ing.name);
+  });
+
+  async function addItem(overrideData) {
     const rid = currentUser?.restaurant_id;
-    const finalName = form.name==="__custom" ? (form.customName||"").trim() : form.name.trim();
-    if (!finalName) return;
+    let entry;
+    if (overrideData) {
+      entry = overrideData;
+    } else {
+      const finalName = form.name==="__custom" ? (form.customName||"").trim() : form.name.trim();
+      if (!finalName) return;
+      entry = {
+        name: finalName,
+        quantity: form.quantity,
+        unit: form.unit,
+        supplier: form.supplier || (lang==="en"?"Other":"Otro"),
+      };
+    }
     const { data, error } = await supabase.from("shopping_list").insert({
-      name: finalName,
-      quantity: form.quantity,
-      unit: form.unit,
-      supplier: form.supplier || (lang==="en"?"Other":"Otro"),
+      ...entry,
       checked: false,
       restaurant_id: rid,
     }).select().single();
@@ -3413,9 +3429,34 @@ function ShoppingList() {
       setPendingShopping(newItems.filter(i=>!i.checked).length);
       return newItems;
     });
-    setForm({ name:"", quantity:"", unit:"lb", supplier:form.supplier, customName:"" });
-    setShowForm(false);
-    showToast(lang==="en"?`✓ ${finalName} added to list`:`✓ ${finalName} agregado a la lista`);
+    if (!overrideData) {
+      setForm({ name:"", quantity:"", unit:"lb", supplier:form.supplier, customName:"" });
+      setShowForm(false);
+    }
+    showToast(lang==="en"?`✓ ${entry.name} added`:`✓ ${entry.name} agregado`);
+    return data;
+  }
+
+  // Agregar todos los sugeridos de una vez
+  async function addAllSuggestions() {
+    const rid = currentUser?.restaurant_id;
+    const toInsert = suggestions.map(ing => ({
+      name: ing.name,
+      quantity: "",
+      unit: ing.unit_purchase || ing.unit_use || "",
+      supplier: ing.supplier || (lang==="en"?"Other":"Otro"),
+      checked: false,
+      restaurant_id: rid,
+    }));
+    if (!toInsert.length) return;
+    const { data, error } = await supabase.from("shopping_list").insert(toInsert).select();
+    if (error) { alert("Error: "+error.message); return; }
+    setItems(p=>{
+      const newItems = [...p, ...data];
+      setPendingShopping(newItems.filter(i=>!i.checked).length);
+      return newItems;
+    });
+    showToast(lang==="en"?`✓ ${data.length} items added`:`✓ ${data.length} ítems agregados`);
   }
 
   async function toggle(id, checked) {
@@ -3447,19 +3488,48 @@ function ShoppingList() {
     });
   }
 
-  async function submitList() {
-    if (items.length===0) { showToast(lang==="en"?"Add items first":"Agrega ítems primero","error"); return; }
-    const rid = currentUser?.restaurant_id;
-    const name = currentUser?.name || "Alguien";
-    const { error } = await supabase.from("app_settings").update({
-      shopping_submitted: true,
-      shopping_submitted_by: name,
-      shopping_submitted_at: new Date().toISOString(),
-    }).eq("restaurant_id", rid);
-    if (error) { showToast("Error: "+error.message, "error"); return; }
-    setShoppingSubmitted(true);
-    setShoppingSubmittedBy(name);
-    showToast(lang==="en"?"✓ List submitted! Everyone will be notified.":"✓ ¡Lista enviada! Todos verán el aviso.");
+  // Copiar lista al portapapeles
+  function copyList() {
+    if (!items.length) return;
+    const date = new Date().toLocaleDateString(lang==="en"?"en-US":"es", {day:"numeric",month:"long",year:"numeric"});
+    const header = lang==="en"?`🛒 Shopping List — ${date}`:`🛒 Lista de compras — ${date}`;
+    const grouped2 = {};
+    items.filter(i=>!i.checked).forEach(i => {
+      const sup = i.supplier || (lang==="en"?"Other":"Otro");
+      if (!grouped2[sup]) grouped2[sup] = [];
+      grouped2[sup].push(i);
+    });
+    const lines = [header, ""];
+    Object.entries(grouped2).forEach(([sup, its]) => {
+      lines.push(`📦 ${sup}`);
+      its.forEach(i => lines.push(`  • ${i.name}${i.quantity?` — ${i.quantity} ${i.unit||""}`:""}`));
+      lines.push("");
+    });
+    navigator.clipboard.writeText(lines.join("\n")).then(()=>{
+      showToast(lang==="en"?"✓ List copied to clipboard":"✓ Lista copiada al portapapeles");
+    });
+  }
+
+  // Enviar por WhatsApp
+  function sendWhatsApp() {
+    if (!items.length) return;
+    const date = new Date().toLocaleDateString(lang==="en"?"en-US":"es", {day:"numeric",month:"long"});
+    const pending = items.filter(i=>!i.checked);
+    const header = lang==="en"?`🛒 *Shopping list — ${date}*`:`🛒 *Lista de compras — ${date}*`;
+    const lines = [header, ""];
+    const grouped2 = {};
+    pending.forEach(i => {
+      const sup = i.supplier || (lang==="en"?"Other":"Otro");
+      if (!grouped2[sup]) grouped2[sup] = [];
+      grouped2[sup].push(i);
+    });
+    Object.entries(grouped2).forEach(([sup, its]) => {
+      lines.push(`📦 *${sup}*`);
+      its.forEach(i => lines.push(`  • ${i.name}${i.quantity?` — ${i.quantity} ${i.unit||""}`:""}`));
+      lines.push("");
+    });
+    const text = encodeURIComponent(lines.join("\n"));
+    window.open(`https://wa.me/?text=${text}`, "_blank");
   }
 
   async function resetList() {
@@ -3484,21 +3554,54 @@ function ShoppingList() {
   });
 
   const checkedCount = items.filter(i=>i.checked).length;
+  const pendingCount = items.length - checkedCount;
 
   return (
     <div style={{padding:20, display:"flex", flexDirection:"column", gap:14}}>
-      {/* Submitted banner */}
-      {shoppingSubmitted&&<div style={{background:"rgba(200,49,43,0.06)",border:`1px solid ${ACCENT}`,borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
-        <i className="ti ti-circle-check" style={{fontSize:20,color:ACCENT,flexShrink:0}}/>
-        <div style={{flex:1}}>
-          <div style={{fontSize:13,fontWeight:700,color:ACCENT}}>{lang==="en"?"List submitted!":"¡Lista enviada!"}</div>
-          <div style={{fontSize:11,color:TEXT2}}>{lang==="en"?`Submitted by ${shoppingSubmittedBy}`:`Enviada por ${shoppingSubmittedBy}`}</div>
+
+      {/* Banner de stock crítico — sugerencias automáticas */}
+      {!loading && suggestions.length > 0 && (
+        <div style={{background:"rgba(239,159,39,0.06)", border:"1px solid rgba(239,159,39,0.35)", borderRadius:10, padding:"12px 14px", display:"flex", flexDirection:"column", gap:10}}>
+          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:10}}>
+            <div style={{display:"flex", alignItems:"center", gap:8}}>
+              <i className="ti ti-alert-triangle" style={{fontSize:16, color:"#EF9F27", flexShrink:0}}/>
+              <span style={{fontSize:13, fontWeight:700, color:"#b07a00"}}>
+                {suggestions.length === 1
+                  ? (lang==="en"?"1 ingredient is running low":"1 ingrediente en stock crítico")
+                  : (lang==="en"?`${suggestions.length} ingredients are running low`:`${suggestions.length} ingredientes en stock crítico`)}
+              </span>
+            </div>
+            <button style={{...g.btnP, fontSize:11, padding:"5px 12px", whiteSpace:"nowrap"}} onClick={addAllSuggestions}>
+              <i className="ti ti-playlist-add" style={{fontSize:12}}/>{lang==="en"?"Add all":"Agregar todos"}
+            </button>
+          </div>
+          <div style={{display:"flex", flexDirection:"column", gap:4}}>
+            {suggestions.map(ing => {
+              const stock = parseFloat(ing.stock)||0;
+              const alert = parseFloat(ing.stock_alert)||0;
+              return (
+                <div key={ing.id} style={{display:"flex", alignItems:"center", gap:10, background:"rgba(239,159,39,0.06)", borderRadius:8, padding:"6px 10px"}}>
+                  <div style={{flex:1, fontSize:12}}>
+                    <span style={{fontWeight:600}}>{ing.name}</span>
+                    <span style={{color:TEXT2, marginLeft:6}}>{stock.toFixed(1)} / {alert.toFixed(1)} {ing.unit_inventory||ing.unit_use}</span>
+                  </div>
+                  <button style={{...g.btnS, fontSize:11, padding:"3px 10px"}} onClick={()=>addItem({
+                    name: ing.name,
+                    quantity: "",
+                    unit: ing.unit_purchase||ing.unit_use||"",
+                    supplier: ing.supplier||(lang==="en"?"Other":"Otro"),
+                  })}>
+                    <i className="ti ti-plus" style={{fontSize:11}}/>{lang==="en"?"Add":"Agregar"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <button style={{...g.btnS,fontSize:11,padding:"6px 12px"}} onClick={resetList}>{lang==="en"?"Reset":"Reiniciar"}</button>
-      </div>}
+      )}
 
       {/* Header controls */}
-      <div style={{display:"flex", gap:10, flexWrap:"wrap", alignItems:"center"}}>
+      <div style={{display:"flex", gap:8, flexWrap:"wrap", alignItems:"center"}}>
         <button style={g.btnP} onClick={()=>setShowForm(v=>!v)}>
           <i className={`ti ${showForm?"ti-x":"ti-plus"}`}/>
           {showForm?(lang==="en"?"Cancel":"Cancelar"):(lang==="en"?"Add item":"Agregar ítem")}
@@ -3506,12 +3609,16 @@ function ShoppingList() {
         {checkedCount>0&&<button style={g.btnD} onClick={clearChecked}>
           <i className="ti ti-trash"/>{lang==="en"?`Clear ${checkedCount} bought`:`Limpiar ${checkedCount} comprados`}
         </button>}
-        {items.length>0&&!shoppingSubmitted&&<button style={{...g.btnP,background:"#378ADD",marginLeft:"auto"}} onClick={submitList}>
-          <i className="ti ti-send"/>{lang==="en"?"Submit list":"Enviar lista"}
-        </button>}
-        {!items.length&&<span style={{marginLeft:"auto", fontSize:11, color:TEXT2}}>
-          {items.length} {lang==="en"?"items":"ítems"} · {checkedCount} {lang==="en"?"bought":"comprados"}
-        </span>}
+        {pendingCount > 0 && (
+          <div style={{marginLeft:"auto", display:"flex", gap:6}}>
+            <button style={g.btnS} onClick={copyList} title={lang==="en"?"Copy to clipboard":"Copiar al portapapeles"}>
+              <i className="ti ti-copy" style={{fontSize:13}}/>{lang==="en"?"Copy":"Copiar"}
+            </button>
+            <button style={{...g.btnP, background:"#25D366"}} onClick={sendWhatsApp}>
+              <i className="ti ti-brand-whatsapp" style={{fontSize:14}}/>{lang==="en"?"Send via WhatsApp":"Enviar por WhatsApp"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Add form */}
@@ -3558,7 +3665,7 @@ function ShoppingList() {
             </select>
           </div>
         </div>
-        <button style={{...g.btnP, alignSelf:"flex-start"}} onClick={addItem}>
+        <button style={{...g.btnP, alignSelf:"flex-start"}} onClick={()=>addItem()}>
           <i className="ti ti-check"/>{lang==="en"?"Add to list":"Agregar a la lista"}
         </button>
       </div>}
@@ -3570,12 +3677,24 @@ function ShoppingList() {
       </div>}
 
       {/* Empty state */}
-      {!loading&&items.length===0&&<div style={{...g.card, padding:40, textAlign:"center"}}>
-        <i className="ti ti-shopping-cart" style={{fontSize:44, color:TEXT2, display:"block", marginBottom:12}}/>
-        <div style={{fontSize:14, fontWeight:600, marginBottom:6}}>{lang==="en"?"Your shopping list is empty":"Tu lista de compras está vacía"}</div>
-        <div style={{fontSize:11, color:TEXT2, marginBottom:16}}>{lang==="en"?"Add items using the button above":"Agrega ítems usando el botón de arriba"}</div>
-        <button style={g.btnP} onClick={()=>setShowForm(true)}><i className="ti ti-plus"/>{lang==="en"?"Add first item":"Agregar primer ítem"}</button>
-      </div>}
+      {!loading&&items.length===0&&(
+        <div style={{...g.card, padding:40, textAlign:"center"}}>
+          <i className="ti ti-shopping-cart" style={{fontSize:44, color:TEXT2, display:"block", marginBottom:12}}/>
+          <div style={{fontSize:14, fontWeight:600, marginBottom:6}}>
+            {suggestions.length > 0
+              ? (lang==="en"?"Your list is empty — but you have low stock!":"Lista vacía — ¡pero tienes stock crítico!")
+              : (lang==="en"?"Your shopping list is empty":"Tu lista de compras está vacía")}
+          </div>
+          <div style={{fontSize:11, color:TEXT2, marginBottom:16}}>
+            {suggestions.length > 0
+              ? (lang==="en"?"Use the suggestions above or add items manually":"Usa las sugerencias de arriba o agrega ítems manualmente")
+              : (lang==="en"?"Add items using the button above":"Agrega ítems usando el botón de arriba")}
+          </div>
+          {suggestions.length === 0 && (
+            <button style={g.btnP} onClick={()=>setShowForm(true)}><i className="ti ti-plus"/>{lang==="en"?"Add first item":"Agregar primer ítem"}</button>
+          )}
+        </div>
+      )}
 
       {/* Grouped by supplier */}
       {!loading&&Object.entries(grouped).map(([supplier, supItems])=>(
@@ -3607,6 +3726,14 @@ function ShoppingList() {
           </div>
         </div>
       ))}
+
+      {/* Footer resumen */}
+      {!loading && items.length > 0 && (
+        <div style={{fontSize:11, color:TEXT2, textAlign:"center", padding:"4px 0"}}>
+          {pendingCount} {lang==="en"?"pending":"pendientes"} · {checkedCount} {lang==="en"?"checked off":"comprados"}
+          {checkedCount > 0 && <span style={{marginLeft:8, color:ACCENT, cursor:"pointer", fontWeight:600}} onClick={clearChecked}> — {lang==="en"?"clear bought":"limpiar comprados"}</span>}
+        </div>
+      )}
     </div>
   );
 }
