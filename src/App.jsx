@@ -238,6 +238,48 @@ const UNIT_TO_BASE = {
 const WEIGHT_UNITS = new Set(["g","kg","oz","lb"]);
 const VOLUME_UNITS = new Set(["ml","L","fl oz","qt","gal","taza","cup","tbsp","tsp"]);
 
+// ─── COUNTRY / CURRENCY / UNIT SYSTEM ────────────────────────────────────────
+const COUNTRIES = [
+  { code:"US", name:"United States",        currency:"$",  unitSystem:"imperial" },
+  { code:"MX", name:"México",               currency:"$",  unitSystem:"metric"   },
+  { code:"ES", name:"España",               currency:"€",  unitSystem:"metric"   },
+  { code:"AR", name:"Argentina",            currency:"$",  unitSystem:"metric"   },
+  { code:"CO", name:"Colombia",             currency:"$",  unitSystem:"metric"   },
+  { code:"CL", name:"Chile",                currency:"$",  unitSystem:"metric"   },
+  { code:"PE", name:"Perú",                 currency:"S/", unitSystem:"metric"   },
+  { code:"EC", name:"Ecuador",              currency:"$",  unitSystem:"metric"   },
+  { code:"GT", name:"Guatemala",            currency:"Q",  unitSystem:"metric"   },
+  { code:"HN", name:"Honduras",             currency:"L",  unitSystem:"metric"   },
+  { code:"SV", name:"El Salvador",          currency:"$",  unitSystem:"metric"   },
+  { code:"CR", name:"Costa Rica",           currency:"₡",  unitSystem:"metric"   },
+  { code:"DO", name:"República Dominicana", currency:"$",  unitSystem:"metric"   },
+  { code:"PR", name:"Puerto Rico",          currency:"$",  unitSystem:"imperial" },
+  { code:"CA", name:"Canada",               currency:"$",  unitSystem:"imperial" },
+  { code:"GB", name:"United Kingdom",       currency:"£",  unitSystem:"metric"   },
+  { code:"FR", name:"France",               currency:"€",  unitSystem:"metric"   },
+  { code:"DE", name:"Germany",              currency:"€",  unitSystem:"metric"   },
+  { code:"IT", name:"Italy",                currency:"€",  unitSystem:"metric"   },
+  { code:"PT", name:"Portugal",             currency:"€",  unitSystem:"metric"   },
+  { code:"BR", name:"Brasil",               currency:"R$", unitSystem:"metric"   },
+  { code:"AU", name:"Australia",            currency:"$",  unitSystem:"metric"   },
+  { code:"OTHER", name:"Other",             currency:"$",  unitSystem:"metric"   },
+];
+function getCurrencySymbol(currency) { return currency || "$"; }
+// fmt(amount, currency) → "$ 12.50" style
+function fmt(amount, currency="$") {
+  const n = parseFloat(amount)||0;
+  return `${currency}${n.toFixed(2)}`;
+}
+const DEFAULT_UNIT_PURCHASE_IMPERIAL = "lb";
+const DEFAULT_UNIT_USE_IMPERIAL      = "lb";
+const DEFAULT_UNIT_PURCHASE_METRIC   = "kg";
+const DEFAULT_UNIT_USE_METRIC        = "kg";
+function defaultUnits(unitSystem) {
+  return unitSystem === "imperial"
+    ? { unit_purchase: DEFAULT_UNIT_PURCHASE_IMPERIAL, unit_use: DEFAULT_UNIT_USE_IMPERIAL }
+    : { unit_purchase: DEFAULT_UNIT_PURCHASE_METRIC,   unit_use: DEFAULT_UNIT_USE_METRIC   };
+}
+
 function convertUnits(qty, fromUnit, toUnit) {
   if (!fromUnit || !toUnit || fromUnit === toUnit) return qty;
   const fromBase = UNIT_TO_BASE[fromUnit];
@@ -363,8 +405,9 @@ const NAV = [
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
 // ─── REGISTER ────────────────────────────────────────────────────────────────
 function Register({ onBack }) {
-  const [step, setStep]     = useState(1); // 1=restaurant name, 2=admin account, 3=done
+  const [step, setStep]     = useState(1); // 1=restaurant name+country, 2=admin account, 3=done
   const [restName, setRN]   = useState("");
+  const [country, setCountry] = useState("US");
   const [name, setName]     = useState("");
   const [email, setEmail]   = useState("");
   const [pwd, setPwd]       = useState("");
@@ -372,6 +415,8 @@ function Register({ onBack }) {
   const [show, setShow]     = useState(false);
   const [err, setErr]       = useState("");
   const [load, setLoad]     = useState(false);
+
+  const selectedCountry = COUNTRIES.find(c=>c.code===country) || COUNTRIES[0];
 
   async function createAccount() {
     setErr("");
@@ -401,6 +446,7 @@ function Register({ onBack }) {
       // 4. Create default app_settings row for this restaurant
       await supabase.from("app_settings").insert({
         restaurant_id: rest.id, lang:"en", main_supplier:"", order_days:[], shopping_submitted:false,
+        currency: selectedCountry.currency, unit_system: selectedCountry.unitSystem,
       });
 
       setStep(3);
@@ -484,6 +530,18 @@ function Register({ onBack }) {
                   autoFocus/>
                 <div style={{ fontSize:11, color:TEXT2 }}>This is what your team will see in the app.</div>
               </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                <label style={g.lbl}>Country / Region</label>
+                <select style={g.inp} value={country} onChange={e=>setCountry(e.target.value)}>
+                  {COUNTRIES.map(c=>(
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
+                </select>
+                <div style={{ fontSize:11, color:TEXT2, display:"flex", gap:12 }}>
+                  <span>Currency: <strong>{selectedCountry.currency}</strong></span>
+                  <span>Units: <strong>{selectedCountry.unitSystem === "imperial" ? "Imperial (lb, oz)" : "Metric (kg, g)"}</strong></span>
+                </div>
+              </div>
               <button style={{ ...g.btnP, width:"100%", justifyContent:"center", opacity:restName.trim()?1:0.5 }}
                 onClick={()=>{ if(!restName.trim()){setErr("Enter your restaurant name.");return;} setStep(2); }}
                 disabled={!restName.trim()}>
@@ -546,9 +604,10 @@ function Register({ onBack }) {
 
 // ─── ONBOARDING WIZARD ───────────────────────────────────────────────────────
 function Onboarding({ onDone }) {
-  const { lang, setPage, currentUser, ingredients, setIngredients } = useApp();
+  const { lang, setPage, currentUser, unitSystem, ingredients, setIngredients } = useApp();
   const [step, setStep] = useState(1); // 1=welcome, 2=ingredient, 3=recipe, 4=done
-  const [ing, setIng]   = useState({ name:"", category:"", supplier:"", unit_purchase:"lb", unit_use:"lb", price:"", pack_size:"1" });
+  const _odu = defaultUnits(unitSystem);
+  const [ing, setIng]   = useState({ name:"", category:"", supplier:"", unit_purchase:_odu.unit_purchase, unit_use:_odu.unit_use, price:"", pack_size:"1" });
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr]   = useState("");
@@ -825,7 +884,7 @@ function Login() {
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
 function Dashboard() {
-  const { ingredients, recipes, lang, pendingShopping, setPage, shoppingSubmitted, shoppingSubmittedBy } = useApp();
+  const { ingredients, recipes, lang, currency, pendingShopping, setPage, shoppingSubmitted, shoppingSubmittedBy } = useApp();
   const isMobile = useIsMobile();
   const [showAlerts, setShowAlerts] = useState(false);
   const calcs    = recipes.map(r => ({ ...r, ...calcRecipe(r, ingredients, recipes) }));
@@ -875,9 +934,9 @@ function Dashboard() {
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:13, fontWeight:600, color:TEXT }}>{ing.name}</div>
                       <div style={{ fontSize:11, color:TEXT2, marginTop:2 }}>
-                        <span style={{ textDecoration:"line-through" }}>${ing.prev_price.toFixed(2)}</span>
+                        <span style={{ textDecoration:"line-through" }}>{fmt(ing.prev_price,currency)}</span>
                         {" → "}
-                        <span style={{ fontWeight:700, color:ACCENT }}>${ing.price.toFixed(2)}</span>
+                        <span style={{ fontWeight:700, color:ACCENT }}>{fmt(ing.price,currency)}</span>
                         {ing.unit_use && <span style={{ color:TEXT2 }}> / {ing.unit_use}</span>}
                       </div>
                     </div>
@@ -920,7 +979,7 @@ function Dashboard() {
         const kpis = [
           { icon:"ti-basket",       label:lang==="en"?"Ingredients":"Ingredientes",  value:ingredients.length,            sub:lang==="en"?"registered":"registrados",   color:TEXT },
           { icon:"ti-book",         label:lang==="en"?"Menu dishes":"Platos",        value:menuDishes.length,             sub:lang==="en"?"in menu":"en menú",           color:TEXT },
-          { icon:"ti-currency-dollar", label:lang==="en"?"Avg cost":"Costo prom.",  value:`$${avgCost.toFixed(2)}`,      sub:lang==="en"?"per portion":"por porción",    color:"#EF9F27" },
+          { icon:"ti-currency-dollar", label:lang==="en"?"Avg cost":"Costo prom.",  value:fmt(avgCost,currency),         sub:lang==="en"?"per portion":"por porción",    color:"#EF9F27" },
           { icon:"ti-trending-up",  label:lang==="en"?"Price alerts":"Alertas",     value:priceUp.length,                sub:lang==="en"?"rose this week":"subieron",   color:priceUp.length>0?FC_ERR:FC_OK, onClick: priceUp.length>0?()=>setShowAlerts(true):null },
         ];
         return (
@@ -957,7 +1016,7 @@ function Dashboard() {
                       <span key={r.id} style={{ fontSize:11, color:TEXT2 }}>
                         <b style={{ color:TEXT }}>{lang==="en"&&r.name_en?r.name_en:r.name}</b>
                         {" → "}
-                        <b style={{ color:ACCENT }}>${sp.toFixed(2)}</b>
+                        <b style={{ color:ACCENT }}>{fmt(sp,currency)}</b>
                         <span style={{ color:TEXT2, fontSize:9 }}> {lang==="en"?"suggested":"sugerido"}</span>
                       </span>
                     ) : null;
@@ -1043,15 +1102,15 @@ function Dashboard() {
               <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                 <div style={{ background:SURF2, border:`1px solid ${BDR}`, borderRadius:8, padding:"8px 14px", textAlign:"center" }}>
                   <div style={{ fontSize:10, color:TEXT2, marginBottom:2 }}>{lang==="en"?"Cost/portion":"Costo/porción"}</div>
-                  <div style={{ fontSize:17, fontWeight:700, color:TEXT }}>${topDish.cpp.toFixed(2)}</div>
+                  <div style={{ fontSize:17, fontWeight:700, color:TEXT }}>{fmt(topDish.cpp,currency)}</div>
                 </div>
                 <div style={{ background:SURF2, border:`1px solid ${BDR}`, borderRadius:8, padding:"8px 14px", textAlign:"center" }}>
                   <div style={{ fontSize:10, color:TEXT2, marginBottom:2 }}>{lang==="en"?"Sell price":"Precio venta"}</div>
-                  <div style={{ fontSize:17, fontWeight:700, color:TEXT }}>${parseFloat(topDish.selling_price).toFixed(2)}</div>
+                  <div style={{ fontSize:17, fontWeight:700, color:TEXT }}>{fmt(parseFloat(topDish.selling_price),currency)}</div>
                 </div>
                 <div style={{ background:SURF2, border:`1px solid ${BDR}`, borderRadius:8, padding:"8px 14px", textAlign:"center" }}>
                   <div style={{ fontSize:10, color:TEXT2, marginBottom:2 }}>{lang==="en"?"Profit":"Ganancia"}</div>
-                  <div style={{ fontSize:17, fontWeight:700, color:FC_OK }}>${(topDish.selling_price - topDish.cpp).toFixed(2)}</div>
+                  <div style={{ fontSize:17, fontWeight:700, color:FC_OK }}>{fmt(topDish.selling_price - topDish.cpp,currency)}</div>
                 </div>
               </div>
             </div>
@@ -1100,8 +1159,8 @@ function Dashboard() {
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontSize:13, fontWeight:600, color:TEXT, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{lang==="en"&&r.name_en?r.name_en:r.name}</div>
                     <div style={{ display:"flex", gap:10, marginTop:4, flexWrap:"wrap" }}>
-                      <span style={{ fontSize:11, color:TEXT2 }}>{lang==="en"?"Cost":"Costo"}: <b style={{ color:TEXT }}>${r.cpp.toFixed(2)}</b></span>
-                      <span style={{ fontSize:11, color:TEXT2 }}>{lang==="en"?"Price":"Precio"}: <b style={{ color:TEXT }}>${parseFloat(r.selling_price).toFixed(2)}</b></span>
+                      <span style={{ fontSize:11, color:TEXT2 }}>{lang==="en"?"Cost":"Costo"}: <b style={{ color:TEXT }}>{fmt(r.cpp,currency)}</b></span>
+                      <span style={{ fontSize:11, color:TEXT2 }}>{lang==="en"?"Price":"Precio"}: <b style={{ color:TEXT }}>{fmt(parseFloat(r.selling_price),currency)}</b></span>
                       <span style={{ fontSize:11, color:TEXT2 }}>FC: <b style={{ color:fc<=30?FC_OK:fc<=40?FC_WARN:FC_ERR }}>{fc.toFixed(1)}%</b></span>
                     </div>
                   </div>
@@ -1137,16 +1196,16 @@ function Dashboard() {
                       {lang==="en"&&r.name_en?r.name_en:r.name}
                       {needsPrice && <span style={{fontSize:9,background:"rgba(200,49,43,0.1)",color:ACCENT,padding:"1px 5px",borderRadius:3,marginLeft:6,fontWeight:600}}>{lang==="en"?"NO PRICE":"SIN PRECIO"}</span>}
                     </td>
-                    <td style={{ ...g.td, color:TEXT2 }}>${r.cpp.toFixed(2)}</td>
+                    <td style={{ ...g.td, color:TEXT2 }}>{fmt(r.cpp,currency)}</td>
                     <td style={g.td}>
                       {hasSell
-                        ? <span style={{fontWeight:600,color:fcHigh?FC_ERR:TEXT}}>${parseFloat(r.selling_price).toFixed(2)}</span>
+                        ? <span style={{fontWeight:600,color:fcHigh?FC_ERR:TEXT}}>{fmt(parseFloat(r.selling_price),currency)}</span>
                         : <span style={{color:TEXT2}}>—</span>}
                     </td>
                     <td style={g.td}>
                       {sugPrice !== null && (
                         <div>
-                          <span style={{fontWeight:700,color:ACCENT}}>${sugPrice.toFixed(2)}</span>
+                          <span style={{fontWeight:700,color:ACCENT}}>{fmt(sugPrice,currency)}</span>
                           {fcHigh && <span style={{fontSize:9,color:FC_ERR,marginLeft:4}}>⚠</span>}
                         </div>
                       )}
@@ -1182,7 +1241,7 @@ function Dashboard() {
                   <div key={ing.id} style={{ padding:"11px 16px", borderBottom:`1px solid ${BDR}`, display:"flex", alignItems:"center", gap:12 }}>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:600, color:TEXT, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{ing.name}</div>
-                      <div style={{ fontSize:11, color:TEXT2, marginTop:2 }}><span style={{ textDecoration:"line-through" }}>${ing.prev_price.toFixed(2)}</span> → <b style={{ color:ACCENT }}>${ing.price.toFixed(2)}</b></div>
+                      <div style={{ fontSize:11, color:TEXT2, marginTop:2 }}><span style={{ textDecoration:"line-through" }}>{fmt(ing.prev_price,currency)}</span> → <b style={{ color:ACCENT }}>{fmt(ing.price,currency)}</b></div>
                     </div>
                     <span style={g.pp(d.up,d.same)}>{d.up?"+":"-"}{d.pct}%</span>
                   </div>
@@ -1203,8 +1262,8 @@ function Dashboard() {
                   return (
                     <tr key={ing.id} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <td style={g.td}>{ing.name}</td>
-                      <td style={{ ...g.td, color:TEXT2 }}>${ing.prev_price.toFixed(2)}</td>
-                      <td style={{ ...g.td, fontWeight:600, color:ACCENT }}>${ing.price.toFixed(2)}</td>
+                      <td style={{ ...g.td, color:TEXT2 }}>{fmt(ing.prev_price,currency)}</td>
+                      <td style={{ ...g.td, fontWeight:600, color:ACCENT }}>{fmt(ing.price,currency)}</td>
                       <td style={g.td}><span style={g.pp(d.up,d.same)}>{d.up?"+":"-"}{d.pct}%</span></td>
                     </tr>
                   );
@@ -1254,7 +1313,7 @@ function PriceSparkline({ ingredient }) {
 }
 
 function Ingredients() {
-  const { ingredients, setIngredients, lang, currentUser } = useApp();
+  const { ingredients, setIngredients, lang, currency, unitSystem, currentUser } = useApp();
   const [search, setSrc] = useState("");
   const [fCat,   setFC]  = useState("all");
   const [fSup,   setFS]  = useState("all");
@@ -1388,7 +1447,8 @@ function Ingredients() {
     setIngredients(p=>p.filter(i=>i.id!==id));
   }
 
-  const blank = { name:"", category:"carnes", supplier:"", unit_purchase:"lb", unit_use:"lb", unit_inventory:"lb", price:"", prev_price:"", pack_size:"", stock:0, min_stock:5 };
+  const du = defaultUnits(unitSystem);
+  const blank = { name:"", category:"carnes", supplier:"", unit_purchase:du.unit_purchase, unit_use:du.unit_use, unit_inventory:du.unit_purchase, price:"", prev_price:"", pack_size:"", stock:0, min_stock:5 };
 
   return (
     <div style={{ padding:20, display:"flex", flexDirection:"column", gap:16 }}>
@@ -1449,7 +1509,7 @@ function Ingredients() {
                   <div style={{width:16,height:16,borderRadius:"50%",border:`2px solid ${group.keepId===ing.id?ACCENT:BDR}`,background:group.keepId===ing.id?ACCENT:"transparent",flexShrink:0}}/>
                   <div style={{flex:1}}>
                     <div style={{fontSize:12,fontWeight:600}}>{ing.name}</div>
-                    <div style={{fontSize:10,color:TEXT2}}>{ing.supplier} · ${ing.price}/{ing.unit_use} · stock: {ing.stock} {ing.unit_inventory}</div>
+                    <div style={{fontSize:10,color:TEXT2}}>{ing.supplier} · {currency}{ing.price}/{ing.unit_use} · stock: {ing.stock} {ing.unit_inventory}</div>
                   </div>
                   {group.keepId===ing.id&&<span style={{fontSize:10,background:"rgba(200,49,43,0.10)",color:ACCENT,padding:"2px 8px",borderRadius:99,fontWeight:700}}>{lang==="en"?"KEEP":"CONSERVAR"}</span>}
                 </div>
@@ -1487,8 +1547,8 @@ function Ingredients() {
                       <td style={g.td}><span style={g.badge("gray")}>{ing.unit_purchase}</span></td>
                       <td style={g.td}><span style={g.badge("gray")}>{ing.unit_use}</span></td>
                       <td style={g.td}><span style={g.badge("gray")}>{ing.unit_inventory}</span></td>
-                      <td style={{...g.td,fontWeight:700,color:ACCENT}}>${ing.price.toFixed(2)}</td>
-                      <td style={{...g.td,color:TEXT2}}>${ing.prev_price.toFixed(2)}</td>
+                      <td style={{...g.td,fontWeight:700,color:ACCENT}}>{fmt(ing.price,currency)}</td>
+                      <td style={{...g.td,color:TEXT2}}>{fmt(ing.prev_price,currency)}</td>
                       <td style={g.td}><span style={g.pp(d.up,d.same)}>{d.same?"—":<>{d.up?"+":"-"}{d.pct}%</>}</span></td>
                       <td style={{...g.td,paddingTop:4,paddingBottom:4}}><PriceSparkline ingredient={ing}/></td>
                       <td style={g.td}><span style={g.badge(st)}>{ing.stock} {ing.unit_inventory}</span></td>
@@ -1515,6 +1575,7 @@ function Ingredients() {
 }
 
 function IngModal({ item, onSave, onClose, isNew, lang }) {
+  const { currency } = useApp();
   const [f, setF] = useState({...item});
   const sf = (k,v) => setF(x=>({...x,[k]:v}));
   const cpu = f.pack_size && parseFloat(f.pack_size)>0 && f.price
@@ -1559,7 +1620,7 @@ function IngModal({ item, onSave, onClose, isNew, lang }) {
             ? `"${f.unit_purchase}" and "${f.unit_use}" can't be auto-converted. Enter the package contents above (e.g. 1 bag = 30 ct) so the cost per unit is correct.`
             : `"${f.unit_purchase}" y "${f.unit_use}" no se pueden convertir automáticamente. Ingresa el contenido del empaque arriba (ej: 1 bolsa = 30 ct) para que el costo por unidad sea correcto.`}
         </div>}
-        {cpu && <div style={{fontSize:11,color:ACCENT,background:"rgba(200,49,43,0.05)",padding:"8px 12px",borderRadius:8}}><i className="ti ti-calculator" style={{marginRight:6}}/>{t("costPerUnit",lang)}: <strong>${cpu}/{f.unit_use}</strong></div>}
+        {cpu && <div style={{fontSize:11,color:ACCENT,background:"rgba(200,49,43,0.05)",padding:"8px 12px",borderRadius:8}}><i className="ti ti-calculator" style={{marginRight:6}}/>{t("costPerUnit",lang)}: <strong>{currency}{cpu}/{f.unit_use}</strong></div>}
         <div style={{display:"flex",gap:10}}>
           <button style={{...g.btnP,flex:1,justifyContent:"center"}} onClick={()=>onSave(f)}><i className="ti ti-check"/>{t("save",lang)}</button>
           <button style={g.btnS} onClick={onClose}>{t("cancel",lang)}</button>
@@ -1638,7 +1699,7 @@ function exportRecipes(recipes, ingredients, lang) {
   exportExcel(rows, lang==="en"?"Recipes":"Recetas", `ChefCost_Recipes_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
-function printRecipe(recipe, ingredients, lang, allRecipes=[]) {
+function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$") {
   const recName = (lang==="en" && recipe.name_en) ? recipe.name_en : recipe.name;
   const T = lang==="en" ? {
     subtitle:"CHEFCOST · RECIPE CARD", portions:"Portions", portionSize:"Portion size", prep:"Prep",
@@ -1743,11 +1804,11 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[]) {
     <div class="cost-grid">
       <div class="cost-cell">
         <div class="cost-label">${T.costPer}</div>
-        <div class="cost-value accent">${cpp > 0 ? `$${cpp.toFixed(2)}` : "—"}</div>
+        <div class="cost-value accent">${cpp > 0 ? `${currency}${cpp.toFixed(2)}` : "—"}</div>
       </div>
       <div class="cost-cell">
         <div class="cost-label">${T.sellPrice}</div>
-        <div class="cost-value">${hasSell ? `$${sellP.toFixed(2)}` : `<span class='cost-warn'>${T.noPrice}</span>`}</div>
+        <div class="cost-value">${hasSell ? `${currency}${sellP.toFixed(2)}` : `<span class='cost-warn'>${T.noPrice}</span>`}</div>
       </div>
       <div class="cost-cell">
         <div class="cost-label">${T.foodCost}</div>
@@ -1755,7 +1816,7 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[]) {
       </div>
       <div class="cost-cell">
         <div class="cost-label">${T.sugPrice} <span class="cost-badge">${recipe.target_margin ? `${recipe.target_margin}%` : "30% FC"}</span></div>
-        <div class="cost-value accent">${sugP ? `$${sugP.toFixed(2)}` : "—"}</div>
+        <div class="cost-value accent">${sugP ? `${currency}${sugP.toFixed(2)}` : "—"}</div>
       </div>
       <div class="cost-cell">
         <div class="cost-label">${T.margin}</div>
@@ -1854,7 +1915,7 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[]) {
 }
 
 function Recipes() {
-  const { ingredients, recipes, setRecipes, lang, currentUser } = useApp();
+  const { ingredients, recipes, setRecipes, lang, currency, currentUser } = useApp();
   const [cats,    setCats] = useState(DEFAULT_RECIPE_CATS);
   const [edit,    setEd]   = useState(null);
   const [addNew,  setAN]   = useState(false);
@@ -1949,7 +2010,7 @@ function Recipes() {
             {label:lang==="en"?"Dishes":"Platillos", value:plateRecipes.length, color:TEXT},
             {label:lang==="en"?"Prep recipes":"Prep recipes", value:recipes.filter(r=>(r.recipe_type||"plate")==="prep").length, color:"#378ADD"},
             {label:t("bestMargin",lang), value:best?(lang==="en"&&best.name_en?best.name_en:best.name):"—", color:ACCENT, small:true},
-            {label:t("avgCost",lang), value:`$${avg.toFixed(2)}`, color:"#EF9F27"},
+            {label:t("avgCost",lang), value:fmt(avg,currency), color:"#EF9F27"},
           ];
         })().map((s,i)=>(
           <div key={i} style={{background:SURF,border:`1px solid ${BDR}`,borderRadius:10,padding:"12px 14px"}}>
@@ -2020,18 +2081,18 @@ function Recipes() {
                       <td style={g.td}>{r.portions}</td>
                       <td style={g.td}>{r.portion_size?<span style={{color:"#378ADD",fontWeight:600}}>{r.portion_size} {r.portion_unit}</span>:"—"}</td>
                       <td style={g.td}><span style={g.badge("warn")}>{r.waste_pct}%</span></td>
-                      <td style={{...g.td,color:TEXT2}}>${c.raw.toFixed(2)}</td>
-                      <td style={{...g.td,color:"#EF9F27"}}>${c.total.toFixed(2)}</td>
-                      <td style={{...g.td,fontWeight:700,color:ACCENT}}>${c.cpp.toFixed(3)}</td>
+                      <td style={{...g.td,color:TEXT2}}>{fmt(c.raw,currency)}</td>
+                      <td style={{...g.td,color:"#EF9F27"}}>{fmt(c.total,currency)}</td>
+                      <td style={{...g.td,fontWeight:700,color:ACCENT}}>{currency}{c.cpp.toFixed(3)}</td>
                       <td style={g.td}>
                         {hasSell
-                          ? <span style={{fontWeight:600,color:fcHigh?FC_ERR:TEXT}}>${parseFloat(r.selling_price).toFixed(2)}</span>
+                          ? <span style={{fontWeight:600,color:fcHigh?FC_ERR:TEXT}}>{fmt(parseFloat(r.selling_price),currency)}</span>
                           : <span style={{fontSize:11,color:TEXT2}}>—</span>}
                       </td>
                       <td style={g.td}>
                         {sugPrice !== null && (
                           <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                            <span style={{fontWeight:700,color:ACCENT,fontSize:13}}>${sugPrice.toFixed(2)}</span>
+                            <span style={{fontWeight:700,color:ACCENT,fontSize:13}}>{fmt(sugPrice,currency)}</span>
                             <span style={{fontSize:9,color:TEXT2}}>
                               {r.target_margin
                                 ? `${r.target_margin}% ${lang==="en"?"margin":"margen"}`
@@ -2064,7 +2125,7 @@ function Recipes() {
                       </td>
                       <td style={g.td}>
                         <div style={{display:"flex",gap:5}}>
-                          <button style={g.btnI} onClick={()=>printRecipe(r,ingredients,lang,recipes)}><i className="ti ti-file-download" style={{fontSize:12}}/>PDF</button>
+                          <button style={g.btnI} onClick={()=>printRecipe(r,ingredients,lang,recipes,currency)}><i className="ti ti-file-download" style={{fontSize:12}}/>PDF</button>
                           <button style={g.btnI} onClick={()=>setEd(r)}><i className="ti ti-pencil" style={{fontSize:12}}/>{t("edit",lang)}</button>
                           <button style={g.btnD} onClick={()=>removeRecipe(r.id)}><i className="ti ti-trash" style={{fontSize:12}}/>{t("delete",lang)}</button>
                         </div>
@@ -2086,6 +2147,7 @@ const ALLERGENS=[{id:"gluten",label:"Gluten",label_en:"Gluten",icon:"🌾"},{id:
 const STAGES=[{id:"prep",label:"Preparación",label_en:"Preparation",icon:"🔪",color:"#378ADD"},{id:"coccion",label:"Cocción",label_en:"Cooking",icon:"🔥",color:"#EF9F27"},{id:"montaje",label:"Montaje",label_en:"Assembly",icon:"🍽️",color:ACCENT}];
 
 function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat,lang,allRecipes=[],defaultType="plate"}) {
+  const { currency } = useApp();
   const blank={id:Date.now(),name:"",name_en:"",category:cats[0]?.id||"",recipe_type:defaultType,portions:1,portion_size:"",portion_unit:"oz",waste_pct:5,selling_price:"",target_margin:"",ingredients:[],steps:[],allergens:[],prep_time:"",cook_time:"",shelf_life:"",total_yield:"",yield_unit:"L"};
   const [r,setR]=useState(init||blank);
   const [cm,setCM]=useState("price");
@@ -2200,7 +2262,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
           <span style={{color:TEXT2}}>{lang==="en"?"Per portion:":"Por porción:"} <strong style={{color:ACCENT}}>{r.portion_size} {r.portion_unit}</strong></span>
         </div>}
         {bm&&<div style={{background:SURF2,borderRadius:8,padding:"10px 14px",fontSize:11,color:ACCENT}}>
-          {t("batch",lang)}: <input style={{...g.inp,width:60,display:"inline-block"}} type="text" inputMode="decimal" value={bs} onChange={e=>setBS(e.target.value)}/> {t("portions",lang).toLowerCase()} = <strong>${cpp.toFixed(3)}</strong>/{lang==="en"?"portion":"porción"}
+          {t("batch",lang)}: <input style={{...g.inp,width:60,display:"inline-block"}} type="text" inputMode="decimal" value={bs} onChange={e=>setBS(e.target.value)}/> {t("portions",lang).toLowerCase()} = <strong>{currency}{cpp.toFixed(3)}</strong>/{lang==="en"?"portion":"porción"}
         </div>}
 
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
@@ -2252,7 +2314,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
                 <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}><label style={{...g.lbl,fontSize:9}}>{t("unit",lang)}</label>
                   <select style={{...g.sel,width:"100%"}} value={ri.unit} onChange={e=>upI(idx,"unit",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select>
                 </div>
-                <div style={{fontSize:11,color:lc>0?"#378ADD":TEXT2,fontWeight:600,paddingBottom:6,minWidth:50,textAlign:"right"}}>${lc.toFixed(3)}</div>
+                <div style={{fontSize:11,color:lc>0?"#378ADD":TEXT2,fontWeight:600,paddingBottom:6,minWidth:50,textAlign:"right"}}>{currency}{lc.toFixed(3)}</div>
                 <button style={{...g.btnD,marginBottom:1}} onClick={()=>rmI(idx)}><i className="ti ti-trash"/></button>
               </div>
             );
@@ -2293,14 +2355,14 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
               <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}><label style={{...g.lbl,fontSize:9}}>{t("unit",lang)}</label>
                 <select style={{...g.sel,width:"100%"}} value={ri.unit} onChange={e=>upI(idx,"unit",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select>
               </div>
-              <div style={{fontSize:11,color:lc>0?ACCENT:TEXT2,fontWeight:600,paddingBottom:6,minWidth:50,textAlign:"right"}}>${lc.toFixed(3)}</div>
+              <div style={{fontSize:11,color:lc>0?ACCENT:TEXT2,fontWeight:600,paddingBottom:6,minWidth:50,textAlign:"right"}}>{currency}{lc.toFixed(3)}</div>
               <button style={{...g.btnD,marginBottom:1}} onClick={()=>rmI(idx)}><i className="ti ti-trash"/></button>
             </div>
           );
         })}
         {c.total>0&&<div style={{background:SURF2,borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:6}}>
           <div style={{fontSize:11,fontWeight:700}}><i className="ti ti-calculator" style={{marginRight:6,color:ACCENT}}/>{t("costSummary",lang)}</div>
-          {[[t("ingredientsCost",lang),`$${c.raw.toFixed(3)}`,TEXT],[t("waste",lang)+" ("+r.waste_pct+"%)",`+$${c.waste.toFixed(3)}`,"#EF9F27"],[t("total2",lang),`$${c.total.toFixed(3)}`,ACCENT],[t("byPortion",lang),`$${cpp.toFixed(3)}`,ACCENT]].map(([l,v,col],i)=>(
+          {[[t("ingredientsCost",lang),`${currency}${c.raw.toFixed(3)}`,TEXT],[t("waste",lang)+" ("+r.waste_pct+"%)",`+${currency}${c.waste.toFixed(3)}`,"#EF9F27"],[t("total2",lang),`${currency}${c.total.toFixed(3)}`,ACCENT],[t("byPortion",lang),`${currency}${cpp.toFixed(3)}`,ACCENT]].map(([l,v,col],i)=>(
             <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:12,borderTop:i===2?`1px solid ${BDR}`:"none",paddingTop:i===2?6:0,fontWeight:i>=2?700:400}}>
               <span style={{color:TEXT2}}>{l}</span><span style={{color:col}}>{v}</span>
             </div>
@@ -2320,7 +2382,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
           </div>}
           {cm==="margin"&&<div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
             <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("targetMargin",lang)}</label><div style={{display:"flex",gap:5}}><input style={g.inp} type="text" inputMode="decimal" value={r.target_margin||""} onChange={e=>sr("target_margin",e.target.value)}/><span style={{color:TEXT2,fontSize:12,paddingBottom:6}}>%</span></div></div>
-            {sug!==null&&<div style={{flex:1}}><div style={{fontSize:11,color:TEXT2,marginBottom:4}}>{t("suggestedPrice",lang)}</div><div style={{fontSize:22,fontWeight:700,color:ACCENT}}>${sug.toFixed(2)}</div></div>}
+            {sug!==null&&<div style={{flex:1}}><div style={{fontSize:11,color:TEXT2,marginBottom:4}}>{t("suggestedPrice",lang)}</div><div style={{fontSize:22,fontWeight:700,color:ACCENT}}>{fmt(sug,currency)}</div></div>}
           </div>}
         </div>}
         {c.total>0&&r.recipe_type==="prep"&&<div style={{background:"rgba(55,138,221,0.05)",border:"1px solid rgba(55,138,221,0.15)",borderRadius:10,padding:"12px 14px",fontSize:12,color:"#378ADD"}}>
@@ -2381,7 +2443,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
 
         <div style={{display:"flex",gap:10}}>
           <button style={{...g.btnP,flex:1,justifyContent:"center"}} onClick={()=>onSave({...r,selling_price:cm==="margin"&&sug?sug.toFixed(2):r.selling_price})}><i className="ti ti-check"/>{t("saveRecipe",lang)}</button>
-          {!isNew&&<button style={g.btnI} onClick={()=>printRecipe(r,ingredients,lang,allRecipes)}><i className="ti ti-file-download"/>{t("downloadPdf",lang)}</button>}
+          {!isNew&&<button style={g.btnI} onClick={()=>printRecipe(r,ingredients,lang,allRecipes,currency)}><i className="ti ti-file-download"/>{t("downloadPdf",lang)}</button>}
           <button style={g.btnS} onClick={onClose}>{t("cancel",lang)}</button>
         </div>
       </div>
@@ -2391,6 +2453,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
 
 // ─── INVOICES ────────────────────────────────────────────────────────────────
 function MonthAccordion({group, lang, selectedInv, setSelectedInv, removeInvoice, g, t, ACCENT, BDR, SURF2}) {
+  const { currency } = useApp();
   const [open, setOpen] = useState(false);
   return (
     <div style={{borderBottom:`1px solid ${BDR}`}}>
@@ -2400,7 +2463,7 @@ function MonthAccordion({group, lang, selectedInv, setSelectedInv, removeInvoice
           <span style={{fontSize:13,fontWeight:600}}>{group.label}</span>
           <span style={{fontSize:11,color:TEXT2,background:SURF2,padding:"2px 8px",borderRadius:99}}>{group.invoices.length} {lang==="en"?"invoices":"facturas"}</span>
         </div>
-        <span style={{fontSize:12,fontWeight:700,color:ACCENT}}>${group.total.toFixed(2)}</span>
+        <span style={{fontSize:12,fontWeight:700,color:ACCENT}}>{fmt(group.total,currency)}</span>
       </div>
       {open&&<div style={{borderTop:`1px solid ${BDR}`}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
@@ -2445,8 +2508,8 @@ function MonthAccordion({group, lang, selectedInv, setSelectedInv, removeInvoice
                             <td style={g.td}>{item.qty}</td>
                             <td style={g.td}><span style={g.badge("gray")}>{item.unit_purchase||item.unit}</span></td>
                             <td style={g.td}>{item.pack_size?`${item.pack_size} ${item.unit_use}`:"—"}</td>
-                            <td style={g.td}>${parseFloat(item.unit_price||0).toFixed(2)}</td>
-                            <td style={{...g.td,color:ACCENT,fontWeight:700}}>${parseFloat(item.total||0).toFixed(2)}</td>
+                            <td style={g.td}>{fmt(parseFloat(item.unit_price||0),currency)}</td>
+                            <td style={{...g.td,color:ACCENT,fontWeight:700}}>{fmt(parseFloat(item.total||0),currency)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2463,7 +2526,7 @@ function MonthAccordion({group, lang, selectedInv, setSelectedInv, removeInvoice
 }
 
 function Invoices() {
-  const { invoices, setInvoices, ingredients, setIngredients, lang, currentUser } = useApp();
+  const { invoices, setInvoices, ingredients, setIngredients, lang, currency, unitSystem, currentUser } = useApp();
   const [activeTab, setActiveTab] = useState("upload");
   const [drag,setDrag]=useState(false);
   const [file,setFile]=useState(null);
@@ -2474,7 +2537,8 @@ function Invoices() {
   const [ext,setExt]=useState([]);
   const [selectedInv, setSelectedInv] = useState(null);
   const ref=useRef();
-  const blankItem = {id:Date.now(),name:"",category:"otros",qty:"",unit_purchase:"lb",unit_use:"lb",unit_inventory:"lb",pack_size:"",unit_price:"",total:"",supplier:"",grouped:false};
+  const _du = defaultUnits(unitSystem);
+  const blankItem = {id:Date.now(),name:"",category:"otros",qty:"",unit_purchase:_du.unit_purchase,unit_use:_du.unit_use,unit_inventory:_du.unit_purchase,pack_size:"",unit_price:"",total:"",supplier:"",grouped:false};
   const [manualSupplier, setManualSupplier] = useState("");
   const [manualDate, setManualDate] = useState(new Date().toISOString().split("T")[0]);
   const [manualItems, setManualItems] = useState([{...blankItem, id:Date.now()}]);
@@ -2660,8 +2724,8 @@ function Invoices() {
                       <td style={g.td}><select style={{...g.sel,width:78}} value={item.unit_inventory} onChange={e=>upd(item.id,"unit_inventory",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select></td>
                       <td style={g.td}><div style={{display:"flex",alignItems:"center",gap:4}}><input style={{...g.inp,width:55}} type="text" inputMode="decimal" placeholder="0" value={item.pack_size||""} onChange={e=>upd(item.id,"pack_size",e.target.value)}/><span style={{fontSize:10,color:TEXT2}}>{item.unit_use}</span></div></td>
                       <td style={g.td}><input style={{...g.inp,width:65}} type="text" inputMode="decimal" value={item.unit_price} onChange={e=>upd(item.id,"unit_price",e.target.value)}/></td>
-                      <td style={g.td}>{costPerBase?<span style={{color:ACCENT,fontWeight:700}}>${costPerBase}</span>:<span style={{color:TEXT2,fontSize:10}}>{lang==="en"?"Add pack size":"Agrega tamaño"}</span>}</td>
-                      <td style={{...g.td,color:ACCENT,fontWeight:700}}>${parseFloat(item.total||0).toFixed(2)}</td>
+                      <td style={g.td}>{costPerBase?<span style={{color:ACCENT,fontWeight:700}}>{currency}{costPerBase}</span>:<span style={{color:TEXT2,fontSize:10}}>{lang==="en"?"Add pack size":"Agrega tamaño"}</span>}</td>
+                      <td style={{...g.td,color:ACCENT,fontWeight:700}}>{fmt(parseFloat(item.total||0),currency)}</td>
                       <td style={g.td}><button style={g.btnD} onClick={()=>setExt(p=>p.filter(i=>i.id!==item.id))}><i className="ti ti-trash" style={{fontSize:12}}/>{t("delete",lang)}</button></td>
                     </tr>
                   );
@@ -2718,7 +2782,7 @@ function Invoices() {
                       <td style={g.td}><select style={{...g.sel,width:78}} value={item.unit_inventory} onChange={e=>updManual(item.id,"unit_inventory",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select></td>
                       <td style={g.td}><div style={{display:"flex",alignItems:"center",gap:4}}><input style={{...g.inp,width:55}} type="text" inputMode="decimal" placeholder="0" value={item.pack_size||""} onChange={e=>updManual(item.id,"pack_size",e.target.value)}/><span style={{fontSize:10,color:TEXT2}}>{item.unit_use}</span></div></td>
                       <td style={g.td}><input style={{...g.inp,width:65}} type="text" inputMode="decimal" placeholder="0.00" value={item.unit_price} onChange={e=>updManual(item.id,"unit_price",e.target.value)}/></td>
-                      <td style={{...g.td,color:ACCENT,fontWeight:700}}>${total.toFixed(2)}</td>
+                      <td style={{...g.td,color:ACCENT,fontWeight:700}}>{fmt(total,currency)}</td>
                       <td style={g.td}><button style={g.btnD} onClick={()=>rmManual(item.id)}><i className="ti ti-trash"/></button></td>
                     </tr>
                   );
@@ -2727,7 +2791,7 @@ function Invoices() {
             </table>
           </div>
           <div style={{padding:"12px 16px",borderTop:`1px solid ${BDR}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{fontSize:12,color:ACCENT,fontWeight:700}}>{lang==="en"?"Est. total:":"Total est.:"} ${manualItems.reduce((s,i)=>s+(parseFloat(i.qty)||0)*(parseFloat(i.unit_price)||0),0).toFixed(2)}</span>
+            <span style={{fontSize:12,color:ACCENT,fontWeight:700}}>{lang==="en"?"Est. total:":"Total est.:"} {fmt(manualItems.reduce((s,i)=>s+(parseFloat(i.qty)||0)*(parseFloat(i.unit_price)||0),0),currency)}</span>
             <button style={g.btnP} onClick={async()=>{
               const prepared=manualItems.filter(i=>i.name.trim()).map(i=>({...i,supplier:manualSupplier,date:manualDate,unit_price:parseFloat(i.unit_price)||0,total:(parseFloat(i.qty)||0)*(parseFloat(i.unit_price)||0)}));
               if(prepared.length===0){alert(lang==="en"?"Add at least one ingredient":"Agrega al menos un ingrediente");return;}
@@ -2764,7 +2828,7 @@ function Invoices() {
 
 
 function Inventory() {
-  const { ingredients, setIngredients, lang, currentUser } = useApp();
+  const { ingredients, setIngredients, lang, currency, currentUser } = useApp();
   const [mode,setMode]=useState("view");
   const [counts,setCounts]=useState({});
   const [saved,setSaved]=useState(null);
@@ -2835,13 +2899,13 @@ function Inventory() {
       <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
         {mode==="view"&&<><span style={{flex:1,fontSize:13,color:TEXT2}}>{saved?t("lastCountSaved",lang):t("noInventoryYet",lang)}</span><button style={g.btnP} onClick={start}><i className="ti ti-clipboard-list"/>{t("startCount",lang)}</button></>}
         {mode==="counting"&&<><span style={{flex:1,fontSize:13,color:ACCENT,fontWeight:600}}><i className="ti ti-clipboard-list" style={{marginRight:6}}/>{t("countInProgress",lang)}</span><button style={g.btnP} onClick={save}><i className="ti ti-device-floppy"/>{t("save",lang)}</button><button style={g.btnS} onClick={()=>{setCounts({});setMode("view");}}>{t("cancel",lang)}</button></>}
-        {mode==="saved"&&<><span style={{flex:1,fontSize:13,color:ACCENT,fontWeight:600}}>✓ {lang==="en"?"Saved":"Guardado"} — {t("totalValue",lang)}: <strong>${totalVal.toFixed(2)}</strong></span><button style={g.btnP} onClick={start}><i className="ti ti-refresh"/>{t("newCount",lang)}</button></>}
+        {mode==="saved"&&<><span style={{flex:1,fontSize:13,color:ACCENT,fontWeight:600}}>✓ {lang==="en"?"Saved":"Guardado"} — {t("totalValue",lang)}: <strong>{fmt(totalVal,currency)}</strong></span><button style={g.btnP} onClick={start}><i className="ti ti-refresh"/>{t("newCount",lang)}</button></>}
       </div>
       {mode==="saved"&&prevVal!==null&&(
         <div style={{background:SURF,border:`1px solid ${BDR}`,borderRadius:12,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{display:"flex",gap:28}}>
-            <div><div style={{fontSize:10,color:TEXT2}}>{lang==="en"?"Previous count":"Conteo anterior"}</div><div style={{fontSize:16,fontWeight:700,color:TEXT2}}>${prevVal.toFixed(2)}</div></div>
-            <div><div style={{fontSize:10,color:TEXT2}}>{lang==="en"?"Current count":"Conteo actual"}</div><div style={{fontSize:16,fontWeight:700,color:ACCENT}}>${totalVal.toFixed(2)}</div></div>
+            <div><div style={{fontSize:10,color:TEXT2}}>{lang==="en"?"Previous count":"Conteo anterior"}</div><div style={{fontSize:16,fontWeight:700,color:TEXT2}}>{fmt(prevVal,currency)}</div></div>
+            <div><div style={{fontSize:10,color:TEXT2}}>{lang==="en"?"Current count":"Conteo actual"}</div><div style={{fontSize:16,fontWeight:700,color:ACCENT}}>{fmt(totalVal,currency)}</div></div>
           </div>
           <div style={{textAlign:"right"}}>
             <div style={{fontSize:10,color:TEXT2}}>{lang==="en"?"Change":"Variación"}</div>
@@ -2860,7 +2924,7 @@ function Inventory() {
       {(mode==="counting"||mode==="saved")&&<>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10}}>
           {[
-            {label:t("totalValue",lang),value:`$${totalVal.toFixed(2)}`,color:ACCENT},
+            {label:t("totalValue",lang),value:fmt(totalVal,currency),color:ACCENT},
             {label:t("counted",lang),value:`${Object.values(counts).filter(c=>c.sealed!==""||c.loose!=="").length}/${ingredients.length}`,color:TEXT},
             {label:t("outOfStock",lang),value:ingredients.filter(i=>{const c=dc?.[i.id];return c&&tot(i,c)===0}).length,color:"#E24B4A"},
           ].map((s,i)=>(
@@ -2876,10 +2940,10 @@ function Inventory() {
         </select>
         {grouped.map(cat=>(
           <div key={cat.id} style={g.card}>
-            <div style={g.catH(cat.color)}><i className="ti ti-box" style={{fontSize:13}}/>{lang==="en"?cat.label_en:cat.label}<span style={{marginLeft:"auto",fontSize:11}}>Est. ${cat.items.reduce((s,ing)=>{const c=dc?.[ing.id];return s+(c?val(ing,c):0);},0).toFixed(2)}</span></div>
+            <div style={g.catH(cat.color)}><i className="ti ti-box" style={{fontSize:13}}/>{lang==="en"?cat.label_en:cat.label}<span style={{marginLeft:"auto",fontSize:11}}>Est. {fmt(cat.items.reduce((s,ing)=>{const c=dc?.[ing.id];return s+(c?val(ing,c):0);},0),currency)}</span></div>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                <thead><tr><th style={g.th}>{t("ingredient",lang)}</th><th style={g.th}>$/{lang==="en"?"unit":"unidad"}</th><th style={g.th}>{t("sealedPacks",lang)}</th><th style={g.th}>{t("loosePacks",lang)}</th><th style={g.th}>{t("total",lang)}</th><th style={g.th}>{t("valueCol",lang)} $</th></tr></thead>
+                <thead><tr><th style={g.th}>{t("ingredient",lang)}</th><th style={g.th}>{currency}/{lang==="en"?"unit":"unidad"}</th><th style={g.th}>{t("sealedPacks",lang)}</th><th style={g.th}>{t("loosePacks",lang)}</th><th style={g.th}>{t("total",lang)}</th><th style={g.th}>{t("valueCol",lang)} {currency}</th></tr></thead>
                 <tbody>
                   {cat.items.map(ing=>{
                     const c=dc?.[ing.id]||{sealed:"",loose:""};
@@ -2888,7 +2952,7 @@ function Inventory() {
                     return (
                       <tr key={ing.id} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <td style={{...g.td,fontWeight:500}}>{ing.name}{ing.pack_size&&<div style={{fontSize:9,color:TEXT2}}>1 {ing.unit_purchase} = {ing.pack_size} {ing.unit_use}</div>}</td>
-                        <td style={{...g.td,color:TEXT2}}>${pu.toFixed(3)}/{ing.unit_use}</td>
+                        <td style={{...g.td,color:TEXT2}}>{currency}{pu.toFixed(3)}/{ing.unit_use}</td>
                         <td style={g.td}>{ing.pack_size
                           ? <div>
                               <div style={{fontSize:9,color:TEXT2,marginBottom:2}}>{lang==="en"?"packs":"empaques"} ({ing.unit_purchase})</div>
@@ -2902,7 +2966,7 @@ function Inventory() {
                           <input style={{...g.inp,width:70,textAlign:"center"}} type="text" inputMode="decimal" placeholder="0" value={c.loose} disabled={mode==="saved"} onChange={e=>upd(ing.id,"loose",e.target.value)}/>
                         </td>
                         <td style={{...g.td,fontWeight:700,color:t2>0?ACCENT:TEXT2}}>{t2>0?`${t2.toFixed(2)} ${ing.unit_use}`:"—"}</td>
-                        <td style={{...g.td,fontWeight:700,color:v>0?"#EF9F27":TEXT2}}>{v>0?`$${v.toFixed(2)}`:"—"}</td>
+                        <td style={{...g.td,fontWeight:700,color:v>0?"#EF9F27":TEXT2}}>{v>0?fmt(v,currency):"—"}</td>
                       </tr>
                     );
                   })}
@@ -2923,7 +2987,7 @@ function Inventory() {
 
 // ─── SHOPPING ────────────────────────────────────────────────────────────────
 function Shopping() {
-  const { ingredients, lang, mainSupplier, orderDays } = useApp();
+  const { ingredients, lang, currency, mainSupplier, orderDays } = useApp();
   const auto = ingredients.filter(i=>parseFloat(i.stock)<(parseFloat(i.min_stock)||5)).map(i=>({id:i.id,name:i.name,category:i.category,unit:i.unit_purchase,price:i.price,qty:Math.max((parseFloat(i.min_stock)||5)-parseFloat(i.stock||0),1),auto:true,checked:false,note:"",supplier:i.supplier||"",group:i.supplier===mainSupplier?"provider":"storerun"}));
   const [items,setItems]=useState(auto);
   const [showAdd,setShowAdd]=useState(false);
@@ -2982,7 +3046,7 @@ function Shopping() {
         </div>
       )}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10}}>
-        {[{label:t("totalItems",lang),value:items.length,color:TEXT},{label:t("pending",lang),value:items.filter(i=>!i.checked).length,color:"#EF9F27"},{label:t("alreadyBought",lang),value:`$${totalChk.toFixed(2)}`,color:ACCENT},{label:t("totalEst",lang),value:`$${totalEst.toFixed(2)}`,color:"#378ADD"}].map((s,i)=>(
+        {[{label:t("totalItems",lang),value:items.length,color:TEXT},{label:t("pending",lang),value:items.filter(i=>!i.checked).length,color:"#EF9F27"},{label:t("alreadyBought",lang),value:fmt(totalChk,currency),color:ACCENT},{label:t("totalEst",lang),value:fmt(totalEst,currency),color:"#378ADD"}].map((s,i)=>(
           <div key={i} style={{background:SURF,border:`1px solid ${BDR}`,borderRadius:10,padding:"12px 14px"}}>
             <div style={{fontSize:10,color:TEXT2,marginBottom:4}}>{s.label}</div>
             <div style={{fontSize:18,fontWeight:700,color:s.color}}>{s.value}</div>
@@ -3019,7 +3083,7 @@ function Shopping() {
         <div key={cat.id} style={g.card}>
           <div style={{...g.catH(cat.color),justifyContent:"space-between"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}><i className="ti ti-tag" style={{fontSize:13}}/>{lang==="en"?cat.label_en:cat.label}<span style={{fontSize:10,fontWeight:400,opacity:0.7}}>({cat.items.length})</span></div>
-            <span style={{fontSize:11,fontWeight:600}}>Est. ${cat.items.reduce((s,i)=>s+(parseFloat(i.qty)||0)*i.price,0).toFixed(2)}</span>
+            <span style={{fontSize:11,fontWeight:600}}>Est. {fmt(cat.items.reduce((s,i)=>s+(parseFloat(i.qty)||0)*i.price,0),currency)}</span>
           </div>
           {cat.items.map(item=>(
             <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:`1px solid ${BDR}`,opacity:item.checked?0.5:1}}>
@@ -3037,23 +3101,23 @@ function Shopping() {
               </div>
               <input style={{...g.inp,width:60,textAlign:"center"}} type="text" inputMode="decimal" value={item.qty} onChange={e=>updQ(item.id,e.target.value)} onClick={e=>e.stopPropagation()}/>
               <span style={{fontSize:11,color:TEXT2}}>{item.unit}</span>
-              <span style={{fontWeight:700,color:"#EF9F27",fontSize:12,minWidth:60,textAlign:"right"}}>${((parseFloat(item.qty)||0)*item.price).toFixed(2)}</span>
+              <span style={{fontWeight:700,color:"#EF9F27",fontSize:12,minWidth:60,textAlign:"right"}}>{fmt((parseFloat(item.qty)||0)*item.price,currency)}</span>
               <input style={{...g.inp,width:130,fontSize:11}} placeholder={lang==="en"?"Note...":"Nota..."} value={item.note} onChange={e=>updN(item.id,e.target.value)} onClick={e=>e.stopPropagation()}/>
               <button style={{...g.btnD,padding:"5px 9px"}} onClick={()=>rem(item.id)}><i className="ti ti-trash"/></button>
             </div>
           ))}
           <div style={{padding:"8px 14px",background:SURF2,display:"flex",justifyContent:"space-between",fontSize:11}}>
             <span style={{color:TEXT2}}>{cat.items.filter(i=>i.checked).length}/{cat.items.length} {t("bought",lang)}</span>
-            <span style={{fontWeight:700,color:"#EF9F27"}}>{t("subtotal",lang)}: ${cat.items.reduce((s,i)=>s+(parseFloat(i.qty)||0)*i.price,0).toFixed(2)}</span>
+            <span style={{fontWeight:700,color:"#EF9F27"}}>{t("subtotal",lang)}: {fmt(cat.items.reduce((s,i)=>s+(parseFloat(i.qty)||0)*i.price,0),currency)}</span>
           </div>
         </div>
       ))}
       {items.length>0&&<div style={{background:SURF,border:`1px solid ${BDR}`,borderRadius:12,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",gap:24}}>
-          <div><div style={{fontSize:10,color:TEXT2}}>{t("alreadyBought",lang)}</div><div style={{fontSize:18,fontWeight:700,color:ACCENT}}>${totalChk.toFixed(2)}</div></div>
-          <div><div style={{fontSize:10,color:TEXT2}}>{t("pending",lang)}</div><div style={{fontSize:18,fontWeight:700,color:"#EF9F27"}}>${(totalEst-totalChk).toFixed(2)}</div></div>
+          <div><div style={{fontSize:10,color:TEXT2}}>{t("alreadyBought",lang)}</div><div style={{fontSize:18,fontWeight:700,color:ACCENT}}>{fmt(totalChk,currency)}</div></div>
+          <div><div style={{fontSize:10,color:TEXT2}}>{t("pending",lang)}</div><div style={{fontSize:18,fontWeight:700,color:"#EF9F27"}}>{fmt(totalEst-totalChk,currency)}</div></div>
         </div>
-        <div style={{textAlign:"right"}}><div style={{fontSize:10,color:TEXT2}}>{t("estTotal",lang)}</div><div style={{fontSize:22,fontWeight:700}}>${totalEst.toFixed(2)}</div></div>
+        <div style={{textAlign:"right"}}><div style={{fontSize:10,color:TEXT2}}>{t("estTotal",lang)}</div><div style={{fontSize:22,fontWeight:700}}>{fmt(totalEst,currency)}</div></div>
       </div>}
     </div>
   );
@@ -3073,7 +3137,7 @@ function translateReason(reason, toLang) {
 }
 
 function WasteLog() {
-  const { ingredients, recipes, lang, currentUser } = useApp();
+  const { ingredients, recipes, lang, currency, currentUser } = useApp();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -3216,9 +3280,9 @@ function WasteLog() {
       {/* Summary cards */}
       <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:10}}>
         {[
-          {label:lang==="en"?"Lost today":"Pérdida hoy",       value:`$${todayCost.toFixed(2)}`,  color:"#E24B4A"},
-          {label:lang==="en"?"Lost this week":"Esta semana",    value:`$${weekCost.toFixed(2)}`,   color:"#EF9F27"},
-          {label:lang==="en"?"Total logged":"Total registrado", value:`$${totalCost.toFixed(2)}`,  color:TEXT},
+          {label:lang==="en"?"Lost today":"Pérdida hoy",       value:fmt(todayCost,currency),  color:"#E24B4A"},
+          {label:lang==="en"?"Lost this week":"Esta semana",    value:fmt(weekCost,currency),   color:"#EF9F27"},
+          {label:lang==="en"?"Total logged":"Total registrado", value:fmt(totalCost,currency),  color:TEXT},
           // #4 — top reason + % del total
           {label:lang==="en"?"Top reason":"Mayor causa", value:topReason?translateReason(topReason[0],lang):"—", sub:topReason&&totalCost>0?`${topReasonPct}% ${lang==="en"?"of total":"del total"}`:null, color:ACCENT, small:true},
         ].map((s,i) => (
@@ -3241,7 +3305,7 @@ function WasteLog() {
               const isToday = i === 6;
               return (
                 <div key={i} style={{flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3}}>
-                  <div style={{fontSize:9, color:TEXT2, fontWeight:isToday?700:400}}>{d.cost>0?`$${d.cost.toFixed(0)}`:""}</div>
+                  <div style={{fontSize:9, color:TEXT2, fontWeight:isToday?700:400}}>{d.cost>0?fmt(d.cost,currency):""}</div>
                   <div style={{width:"100%", height:barH, background:isToday?ACCENT:d.cost>0?"rgba(200,49,43,0.35)":BDR, borderRadius:"3px 3px 0 0", transition:"height 0.3s"}}/>
                   <div style={{fontSize:9, color:isToday?ACCENT:TEXT2, fontWeight:isToday?700:400}}>{d.label}</div>
                 </div>
@@ -3331,7 +3395,7 @@ function WasteLog() {
         {/* Cost preview */}
         {form.item_id && form.quantity && <div style={{background:"rgba(226,75,74,0.06)", border:"1px solid rgba(226,75,74,0.2)", borderRadius:8, padding:"10px 14px", fontSize:12, color:"#E24B4A"}}>
           <i className="ti ti-currency-dollar" style={{marginRight:6}}/>
-          {lang==="en"?"Estimated loss:":"Pérdida estimada:"} <strong>${calcCost(form.type, form.item_id, form.quantity, form.unit).toFixed(2)}</strong>
+          {lang==="en"?"Estimated loss:":"Pérdida estimada:"} <strong>{fmt(calcCost(form.type, form.item_id, form.quantity, form.unit),currency)}</strong>
         </div>}
 
         {/* Notes */}
@@ -3378,7 +3442,7 @@ function WasteLog() {
                     <td style={{...g.td, fontWeight:600}}>{log.item_name}</td>
                     <td style={g.td}>{log.quantity} {log.unit}</td>
                     <td style={g.td}><span style={g.badge("warn")}>{translateReason(log.reason, lang)}</span></td>
-                    <td style={{...g.td, fontWeight:700, color:"#E24B4A"}}>${parseFloat(log.cost||0).toFixed(2)}</td>
+                    <td style={{...g.td, fontWeight:700, color:"#E24B4A"}}>{fmt(parseFloat(log.cost||0),currency)}</td>
                     <td style={{...g.td, color:TEXT2, fontStyle:"italic"}}>{log.notes||"—"}</td>
                     {/* #1 — delete with confirmation */}
                     <td style={g.td}>
@@ -3399,7 +3463,7 @@ function WasteLog() {
           {/* #5 — footer total uses filtered */}
           <div style={{padding:"10px 16px", borderTop:`1px solid ${BDR}`, display:"flex", justifyContent:"flex-end", gap:20, fontSize:12}}>
             <span style={{color:TEXT2}}>{filtered.length} {lang==="en"?"entries":"registros"}{filter!=="all"?` (${lang==="en"?"filtered":"filtrado"})`:""}</span>
-            <span style={{fontWeight:700, color:"#E24B4A"}}>{lang==="en"?"Total lost:":"Total perdido:"} ${filteredCost.toFixed(2)}</span>
+            <span style={{fontWeight:700, color:"#E24B4A"}}>{lang==="en"?"Total lost:":"Total perdido:"} {fmt(filteredCost,currency)}</span>
           </div>
         </div>
       }
@@ -3408,7 +3472,7 @@ function WasteLog() {
 }
 
 function ShoppingList() {
-  const { ingredients, lang, setPendingShopping, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, currentUser } = useApp();
+  const { ingredients, lang, currency, setPendingShopping, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, currentUser } = useApp();
   const showToast = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3775,7 +3839,7 @@ function ShoppingList() {
 }
 
 function Settings() {
-  const { currentUser, setUser, users, setUsers, lang, setLang, mainSupplier, setMainSupplier, orderDays, setOrderDays, ingredients, restaurantName, plan, setPlan } = useApp();
+  const { currentUser, setUser, users, setUsers, lang, setLang, currency, setCurrency, unitSystem, setUnitSystem, mainSupplier, setMainSupplier, orderDays, setOrderDays, ingredients, restaurantName, plan, setPlan } = useApp();
   const [tab,setTab]=useState("account");
   const [editU,setEd]=useState(null);
   const [addNew,setAN]=useState(false);
@@ -3899,16 +3963,58 @@ function Settings() {
         </div>
       </div>}
 
-      {tab==="language"&&<div style={{...g.card,padding:20,display:"flex",flexDirection:"column",gap:12}}>
-        <div style={{fontSize:13,fontWeight:600}}>{lang==="es"?"Idioma de la app":"App language"}</div>
-        <div style={{display:"flex",gap:10}}>
-          {["es","en"].map(l=>(
-            <button key={l} style={{flex:1,padding:14,borderRadius:10,border:`2px solid ${lang===l?ACCENT:BDR}`,background:lang===l?"rgba(200,49,43,0.05)":SURF2,color:lang===l?ACCENT:TEXT2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontWeight:lang===l?700:400,fontSize:12}} onClick={async()=>{setLang(l);const rid=currentUser?.restaurant_id;const{error}=await supabase.from("app_settings").update({lang:l}).eq("restaurant_id",rid);if(error)console.error("Error guardando idioma:",error.message);}}>
-              <i className="ti ti-language" style={{fontSize:24,color:lang===l?ACCENT:TEXT2}}/>
-              {l==="es"?"Español":"English"}
-              {lang===l&&<span style={{fontSize:10}}>✓ {lang==="en"?"Active":"Activo"}</span>}
-            </button>
-          ))}
+      {tab==="language"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{...g.card,padding:20,display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{fontSize:13,fontWeight:600}}>{lang==="es"?"Idioma de la app":"App language"}</div>
+          <div style={{display:"flex",gap:10}}>
+            {["es","en"].map(l=>(
+              <button key={l} style={{flex:1,padding:14,borderRadius:10,border:`2px solid ${lang===l?ACCENT:BDR}`,background:lang===l?"rgba(200,49,43,0.05)":SURF2,color:lang===l?ACCENT:TEXT2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontWeight:lang===l?700:400,fontSize:12}} onClick={async()=>{setLang(l);const rid=currentUser?.restaurant_id;const{error}=await supabase.from("app_settings").update({lang:l}).eq("restaurant_id",rid);if(error)console.error("Error guardando idioma:",error.message);}}>
+                <i className="ti ti-language" style={{fontSize:24,color:lang===l?ACCENT:TEXT2}}/>
+                {l==="es"?"Español":"English"}
+                {lang===l&&<span style={{fontSize:10}}>✓ {lang==="en"?"Active":"Activo"}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{...g.card,padding:20,display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{fontSize:13,fontWeight:600}}>{lang==="en"?"Currency & Units":"Moneda y Unidades"}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              <label style={g.lbl}>{lang==="en"?"Country / Region":"País / Región"}</label>
+              <select style={{...g.sel,width:"100%"}} value={COUNTRIES.find(c=>c.currency===currency&&c.unitSystem===unitSystem)?.code||"OTHER"} onChange={async e=>{
+                const c=COUNTRIES.find(x=>x.code===e.target.value)||COUNTRIES[0];
+                setCurrency(c.currency); setUnitSystem(c.unitSystem);
+                const rid=currentUser?.restaurant_id;
+                await supabase.from("app_settings").update({currency:c.currency,unit_system:c.unitSystem}).eq("restaurant_id",rid);
+              }}>
+                {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.name}</option>)}
+              </select>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}>
+                <label style={g.lbl}>{lang==="en"?"Currency symbol":"Símbolo de moneda"}</label>
+                <input style={g.inp} value={currency} onChange={async e=>{
+                  setCurrency(e.target.value);
+                  const rid=currentUser?.restaurant_id;
+                  await supabase.from("app_settings").update({currency:e.target.value}).eq("restaurant_id",rid);
+                }} maxLength={4}/>
+              </div>
+              <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}>
+                <label style={g.lbl}>{lang==="en"?"Unit system":"Sistema de medidas"}</label>
+                <select style={{...g.sel,width:"100%"}} value={unitSystem} onChange={async e=>{
+                  setUnitSystem(e.target.value);
+                  const rid=currentUser?.restaurant_id;
+                  await supabase.from("app_settings").update({unit_system:e.target.value}).eq("restaurant_id",rid);
+                }}>
+                  <option value="imperial">Imperial (lb, oz, fl oz)</option>
+                  <option value="metric">Metric (kg, g, L)</option>
+                </select>
+              </div>
+            </div>
+            <div style={{fontSize:11,color:TEXT2,background:SURF2,borderRadius:8,padding:"8px 12px"}}>
+              <i className="ti ti-info-circle" style={{marginRight:6}}/>{lang==="en"?"Current: prices show as ":"Actual: precios como "}<strong>{fmt(9.99,currency)}</strong>{lang==="en"?" · Default units: ":" · Unidades por defecto: "}<strong>{unitSystem==="imperial"?"lb / oz":"kg / g"}</strong>
+            </div>
+          </div>
         </div>
       </div>}
 
@@ -4372,6 +4478,8 @@ export default function App() {
   const [recipes,     setRecipes]     = useState([]);
   const [invoices,    setInvoices]    = useState([]);
   const [lang,        setLang]        = useState("en");
+  const [currency,    setCurrency]    = useState("$");
+  const [unitSystem,  setUnitSystem]  = useState("imperial");
   const [mainSupplier, setMainSupplier] = useState("Restaurant Depot");
   const [orderDays,   setOrderDays]   = useState([]);
   const [pendingShopping, setPendingShopping] = useState(0);
@@ -4419,6 +4527,8 @@ export default function App() {
           setLang(setRes.data.lang || "en");
           setMainSupplier(setRes.data.main_supplier || "Restaurant Depot");
           setOrderDays(setRes.data.order_days || []);
+          if (setRes.data.currency) setCurrency(setRes.data.currency);
+          if (setRes.data.unit_system) setUnitSystem(setRes.data.unit_system);
         }
         if (!shopRes.error && shopRes.data) {
           setPendingShopping(shopRes.data.length);
@@ -4452,7 +4562,7 @@ export default function App() {
   const canAccess = (id) => !currentUser ? false : currentUser.role==="admin" ? true : !!currentUser.permissions[id];
   const canEdit   = (id) => !currentUser ? false : currentUser.role==="admin" ? true : currentUser.permissions[id]==="edit";
 
-  const ctx = { currentUser, setUser, users, setUsers, ingredients, setIngredients, recipes, setRecipes, invoices, setInvoices, lang, setLang, mainSupplier, setMainSupplier, orderDays, setOrderDays, pendingShopping, setPendingShopping, setPage, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, restaurantName, plan, setPlan };
+  const ctx = { currentUser, setUser, users, setUsers, ingredients, setIngredients, recipes, setRecipes, invoices, setInvoices, lang, setLang, currency, setCurrency, unitSystem, setUnitSystem, mainSupplier, setMainSupplier, orderDays, setOrderDays, pendingShopping, setPendingShopping, setPage, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, restaurantName, plan, setPlan };
 
   const PAGES = { dashboard:<Dashboard/>, ingredients:<Ingredients/>, recipes:<Recipes/>, invoices:<Invoices/>, inventory:<Inventory/>, wastelog:<WasteLog/>, shopping:<ShoppingList/>, settings:<Settings/> };
   const visibleNav = [...NAV.filter(n=>canAccess(n.id)), { id:"settings", icon:"ti-settings", es:"Configuración", en:"Settings" }];
