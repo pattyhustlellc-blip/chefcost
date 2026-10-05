@@ -2297,7 +2297,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
             </div>
           ))}
         </div>}
-        {c.total>0&&<div style={{background:"rgba(200,49,43,0.04)",border:"1px solid rgba(200,49,43,0.10)",borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
+        {c.total>0&&r.recipe_type!=="prep"&&<div style={{background:"rgba(200,49,43,0.04)",border:"1px solid rgba(200,49,43,0.10)",borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
           <div style={{display:"flex",gap:6}}>
             {["price","margin"].map(m=>(
               <button key={m} style={{...(cm===m?g.btnP:{...g.btnS,color:TEXT2}),fontSize:11,padding:"5px 12px"}} onClick={()=>setCM(m)}>
@@ -2313,6 +2313,12 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
             <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("targetMargin",lang)}</label><div style={{display:"flex",gap:5}}><input style={g.inp} type="text" inputMode="decimal" value={r.target_margin||""} onChange={e=>sr("target_margin",e.target.value)}/><span style={{color:TEXT2,fontSize:12,paddingBottom:6}}>%</span></div></div>
             {sug!==null&&<div style={{flex:1}}><div style={{fontSize:11,color:TEXT2,marginBottom:4}}>{t("suggestedPrice",lang)}</div><div style={{fontSize:22,fontWeight:700,color:ACCENT}}>${sug.toFixed(2)}</div></div>}
           </div>}
+        </div>}
+        {c.total>0&&r.recipe_type==="prep"&&<div style={{background:"rgba(55,138,221,0.05)",border:"1px solid rgba(55,138,221,0.15)",borderRadius:10,padding:"12px 14px",fontSize:12,color:"#378ADD"}}>
+          <i className="ti ti-info-circle" style={{marginRight:6}}/>
+          {lang==="en"
+            ? "Prep recipes don't have a selling price — they are used as components inside other recipes."
+            : "Las prep recipes no tienen precio de venta — se usan como componente dentro de otras recetas."}
         </div>}
         </>}
 
