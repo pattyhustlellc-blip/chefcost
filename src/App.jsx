@@ -2147,8 +2147,9 @@ const ALLERGENS=[{id:"gluten",label:"Gluten",label_en:"Gluten",icon:"🌾"},{id:
 const STAGES=[{id:"prep",label:"Preparación",label_en:"Preparation",icon:"🔪",color:"#378ADD"},{id:"coccion",label:"Cocción",label_en:"Cooking",icon:"🔥",color:"#EF9F27"},{id:"montaje",label:"Montaje",label_en:"Assembly",icon:"🍽️",color:ACCENT}];
 
 function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat,lang,allRecipes=[],defaultType="plate"}) {
-  const { currency } = useApp();
-  const blank={id:Date.now(),name:"",name_en:"",category:cats[0]?.id||"",recipe_type:defaultType,portions:1,portion_size:"",portion_unit:"oz",waste_pct:5,selling_price:"",target_margin:"",ingredients:[],steps:[],allergens:[],prep_time:"",cook_time:"",shelf_life:"",total_yield:"",yield_unit:"L"};
+  const { currency, unitSystem } = useApp();
+  const _rdu = defaultUnits(unitSystem);
+  const blank={id:Date.now(),name:"",name_en:"",category:cats[0]?.id||"",recipe_type:defaultType,portions:1,portion_size:"",portion_unit:_rdu.unit_use,waste_pct:5,selling_price:"",target_margin:"",ingredients:[],steps:[],allergens:[],prep_time:"",cook_time:"",shelf_life:"",total_yield:"",yield_unit:unitSystem==="metric"?"L":"gal"};
   const [r,setR]=useState(init||blank);
   const [cm,setCM]=useState("price");
   const [bm,setBM]=useState(false);
@@ -2158,7 +2159,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
   const [snc,setSNC]=useState(false);
   const [activeTab,setActiveTab]=useState("ingredients");
   const sr=(k,v)=>setR(x=>({...x,[k]:v}));
-  const addI=()=>setR(x=>({...x,ingredients:[...x.ingredients,{id:Date.now(),ing_id:"",qty:"",unit:"oz"}]}));
+  const addI=()=>setR(x=>({...x,ingredients:[...x.ingredients,{id:Date.now(),ing_id:"",qty:"",unit:_rdu.unit_use}]}));
   const upI=(idx,k,v)=>setR(x=>{const a=[...x.ingredients];a[idx]={...a[idx],[k]:v};return{...x,ingredients:a}});
   const rmI=(idx)=>setR(x=>({...x,ingredients:x.ingredients.filter((_,i)=>i!==idx)}));
   const addStep=(stage)=>setR(x=>({...x,steps:[...(x.steps||[]),{id:Date.now(),stage,text:"",time:""}]}));
@@ -2238,7 +2239,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
             <label style={g.lbl}>{t("portionSize",lang)} <span style={{fontSize:9,color:ACCENT}}>{r.total_yield?lang==="en"?"(auto)":"(auto)":""}</span></label>
             <div style={{display:"flex",gap:5}}>
               <input style={{...g.inp,flex:1}} type="text" inputMode="decimal" placeholder="4" value={r.portion_size||""} onChange={e=>sr("portion_size",e.target.value)} readOnly={!!r.total_yield}/>
-              <select style={g.sel} value={r.portion_unit||"oz"} onChange={e=>sr("portion_unit",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select>
+              <select style={g.sel} value={r.portion_unit||_rdu.unit_use} onChange={e=>sr("portion_unit",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select>
             </div>
           </div>
           <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}>
@@ -2987,18 +2988,19 @@ function Inventory() {
 
 // ─── SHOPPING ────────────────────────────────────────────────────────────────
 function Shopping() {
-  const { ingredients, lang, currency, mainSupplier, orderDays } = useApp();
+  const { ingredients, lang, currency, unitSystem, mainSupplier, orderDays } = useApp();
+  const _shopDu = defaultUnits(unitSystem);
   const auto = ingredients.filter(i=>parseFloat(i.stock)<(parseFloat(i.min_stock)||5)).map(i=>({id:i.id,name:i.name,category:i.category,unit:i.unit_purchase,price:i.price,qty:Math.max((parseFloat(i.min_stock)||5)-parseFloat(i.stock||0),1),auto:true,checked:false,note:"",supplier:i.supplier||"",group:i.supplier===mainSupplier?"provider":"storerun"}));
   const [items,setItems]=useState(auto);
   const [showAdd,setShowAdd]=useState(false);
-  const [ni,setNI]=useState({name:"",category:"carnes",unit:"lb",qty:"",price:"",note:"",group:"storerun"});
+  const [ni,setNI]=useState({name:"",category:"carnes",unit:_shopDu.unit_purchase,qty:"",price:"",note:"",group:"storerun"});
   const [fCat,setFC]=useState("all");
   const [fGroup,setFGroup]=useState("all");
   const toggle=(id)=>setItems(p=>p.map(i=>i.id===id?{...i,checked:!i.checked}:i));
   const updQ=(id,v)=>setItems(p=>p.map(i=>i.id===id?{...i,qty:v}:i));
   const updN=(id,v)=>setItems(p=>p.map(i=>i.id===id?{...i,note:v}:i));
   const rem=(id)=>setItems(p=>p.filter(i=>i.id!==id));
-  function add(){if(!ni.name.trim())return;setItems(p=>[...p,{id:Date.now(),name:ni.name,category:ni.category,unit:ni.unit,price:parseFloat(ni.price)||0,qty:parseFloat(ni.qty)||1,auto:false,checked:false,note:ni.note,supplier:"",group:ni.group}]);setNI({name:"",category:"carnes",unit:"lb",qty:"",price:"",note:"",group:"storerun"});setShowAdd(false);}
+  function add(){if(!ni.name.trim())return;setItems(p=>[...p,{id:Date.now(),name:ni.name,category:ni.category,unit:ni.unit,price:parseFloat(ni.price)||0,qty:parseFloat(ni.qty)||1,auto:false,checked:false,note:ni.note,supplier:"",group:ni.group}]);setNI({name:"",category:"carnes",unit:_shopDu.unit_purchase,qty:"",price:"",note:"",group:"storerun"});setShowAdd(false);}
   const groupFiltered=fGroup==="all"?items:items.filter(i=>i.group===fGroup);
   const filtered=fCat==="all"?groupFiltered:groupFiltered.filter(i=>i.category===fCat);
   const grouped=CAT_ING.map(c=>({...c,items:filtered.filter(i=>i.category===c.id)})).filter(c=>c.items.length>0);
@@ -3472,12 +3474,13 @@ function WasteLog() {
 }
 
 function ShoppingList() {
-  const { ingredients, lang, currency, setPendingShopping, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, currentUser } = useApp();
+  const { ingredients, lang, currency, unitSystem, setPendingShopping, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, currentUser } = useApp();
   const showToast = useToast();
+  const _sdu = defaultUnits(unitSystem);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name:"", quantity:"", unit:"lb", supplier:"", customName:"" });
+  const [form, setForm] = useState({ name:"", quantity:"", unit:_sdu.unit_purchase, supplier:"", customName:"" });
   const sf = (k,v) => setForm(x=>({...x,[k]:v}));
   const suppliers = [...new Set(ingredients.map(i=>i.supplier).filter(Boolean))];
 
@@ -3530,7 +3533,7 @@ function ShoppingList() {
       return newItems;
     });
     if (!overrideData) {
-      setForm({ name:"", quantity:"", unit:"lb", supplier:form.supplier, customName:"" });
+      setForm({ name:"", quantity:"", unit:_sdu.unit_purchase, supplier:form.supplier, customName:"" });
       setShowForm(false);
     }
     showToast(lang==="en"?`✓ ${entry.name} added`:`✓ ${entry.name} agregado`);
@@ -3731,7 +3734,7 @@ function ShoppingList() {
               const selected = ingredients.find(i=>i.name===e.target.value);
               sf("name", e.target.value);
               if (selected) {
-                sf("unit", selected.unit_purchase||selected.unit_use||"lb");
+                sf("unit", selected.unit_purchase||selected.unit_use||_sdu.unit_purchase);
                 sf("supplier", selected.supplier||"");
               }
             }}>
