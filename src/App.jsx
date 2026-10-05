@@ -1519,6 +1519,9 @@ function IngModal({ item, onSave, onClose, isNew, lang }) {
   const sf = (k,v) => setF(x=>({...x,[k]:v}));
   const cpu = f.pack_size && parseFloat(f.pack_size)>0 && f.price
     ? (parseFloat(f.price)/parseFloat(f.pack_size)).toFixed(3) : null;
+  // Warn when unit_purchase ≠ unit_use, units are not auto-convertible, and pack_size is missing
+  const needsPackSize = f.unit_purchase && f.unit_use && f.unit_purchase !== f.unit_use
+    && !UNIT_TO_BASE[f.unit_purchase] && !f.pack_size;
   return (
     <div style={g.modal}>
       <div style={g.mbox} onClick={e=>e.stopPropagation()}>
@@ -1550,7 +1553,13 @@ function IngModal({ item, onSave, onClose, isNew, lang }) {
           <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("currentStock",lang)}</label><input style={g.inp} type="text" inputMode="decimal" value={f.stock} onChange={e=>sf("stock",e.target.value)}/></div>
           <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("minStock",lang)}</label><input style={g.inp} type="text" inputMode="decimal" placeholder="5" value={f.min_stock??""} onChange={e=>sf("min_stock",e.target.value)}/></div>
         </div>
-        {cpu && <div style={{fontSize:11,color:ACCENT,background:"rgba(200,49,43,0.05)",padding:"8px 12px",borderRadius:8}}><i className="ti ti-calculator" style={{marginRight:6}}/>{t("costPerUnit",lang)}: <strong>${cpu}</strong></div>}
+        {needsPackSize && <div style={{fontSize:11,color:FC_WARN,background:WARN_BG,border:`1px solid ${WARN_BDR}`,padding:"8px 12px",borderRadius:8}}>
+          <i className="ti ti-alert-triangle" style={{marginRight:6}}/>
+          {lang==="en"
+            ? `"${f.unit_purchase}" and "${f.unit_use}" can't be auto-converted. Enter the package contents above (e.g. 1 bag = 30 ct) so the cost per unit is correct.`
+            : `"${f.unit_purchase}" y "${f.unit_use}" no se pueden convertir automáticamente. Ingresa el contenido del empaque arriba (ej: 1 bolsa = 30 ct) para que el costo por unidad sea correcto.`}
+        </div>}
+        {cpu && <div style={{fontSize:11,color:ACCENT,background:"rgba(200,49,43,0.05)",padding:"8px 12px",borderRadius:8}}><i className="ti ti-calculator" style={{marginRight:6}}/>{t("costPerUnit",lang)}: <strong>${cpu}/{f.unit_use}</strong></div>}
         <div style={{display:"flex",gap:10}}>
           <button style={{...g.btnP,flex:1,justifyContent:"center"}} onClick={()=>onSave(f)}><i className="ti ti-check"/>{t("save",lang)}</button>
           <button style={g.btnS} onClick={onClose}>{t("cancel",lang)}</button>
@@ -2880,9 +2889,19 @@ function Inventory() {
                       <tr key={ing.id} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <td style={{...g.td,fontWeight:500}}>{ing.name}{ing.pack_size&&<div style={{fontSize:9,color:TEXT2}}>1 {ing.unit_purchase} = {ing.pack_size} {ing.unit_use}</div>}</td>
                         <td style={{...g.td,color:TEXT2}}>${pu.toFixed(3)}/{ing.unit_use}</td>
-                        <td style={g.td}>{ing.pack_size?<div><input style={{...g.inp,width:70,textAlign:"center"}} type="text" inputMode="decimal" placeholder="0" value={c.sealed} disabled={mode==="saved"} onChange={e=>upd(ing.id,"sealed",e.target.value)}/>{parseFloat(c.sealed)>0&&<div style={{fontSize:9,color:ACCENT,textAlign:"center"}}>={parseFloat(c.sealed)*ing.pack_size} {ing.unit_use}</div>}</div>:<span style={{fontSize:11,color:TEXT2}}>N/A</span>}</td>
-                        <td style={g.td}><input style={{...g.inp,width:70,textAlign:"center"}} type="text" inputMode="decimal" placeholder="0" value={c.loose} disabled={mode==="saved"} onChange={e=>upd(ing.id,"loose",e.target.value)}/></td>
-                        <td style={{...g.td,fontWeight:700,color:t2>0?ACCENT:TEXT2}}>{t2>0?`${t2} ${ing.unit_use}`:"—"}</td>
+                        <td style={g.td}>{ing.pack_size
+                          ? <div>
+                              <div style={{fontSize:9,color:TEXT2,marginBottom:2}}>{lang==="en"?"packs":"empaques"} ({ing.unit_purchase})</div>
+                              <input style={{...g.inp,width:70,textAlign:"center"}} type="text" inputMode="decimal" placeholder="0" value={c.sealed} disabled={mode==="saved"} onChange={e=>upd(ing.id,"sealed",e.target.value)}/>
+                              {parseFloat(c.sealed)>0&&<div style={{fontSize:9,color:ACCENT,textAlign:"center"}}>={parseFloat(c.sealed)*ing.pack_size} {ing.unit_use}</div>}
+                            </div>
+                          : <span style={{fontSize:11,color:TEXT2}}>N/A</span>}
+                        </td>
+                        <td style={g.td}>
+                          <div style={{fontSize:9,color:TEXT2,marginBottom:2}}>{ing.unit_use}</div>
+                          <input style={{...g.inp,width:70,textAlign:"center"}} type="text" inputMode="decimal" placeholder="0" value={c.loose} disabled={mode==="saved"} onChange={e=>upd(ing.id,"loose",e.target.value)}/>
+                        </td>
+                        <td style={{...g.td,fontWeight:700,color:t2>0?ACCENT:TEXT2}}>{t2>0?`${t2.toFixed(2)} ${ing.unit_use}`:"—"}</td>
                         <td style={{...g.td,fontWeight:700,color:v>0?"#EF9F27":TEXT2}}>{v>0?`$${v.toFixed(2)}`:"—"}</td>
                       </tr>
                     );
@@ -3074,15 +3093,19 @@ function WasteLog() {
     load();
   }, []);
 
-  // Calculate cost based on type
-  function calcCost(type, itemId, qty) {
+  // Calculate cost based on type — respects the unit the user entered
+  function calcCost(type, itemId, qty, unit) {
     const q = parseFloat(qty) || 0;
     if (q <= 0) return 0;
     if (type === "ingredient") {
       const ing = ingredients.find(i => i.id === parseInt(itemId));
       if (!ing) return 0;
-      const unitCost = ing.pack_size ? ing.price / ing.pack_size : ing.price;
-      return q * unitCost;
+      // Convert qty from the logged unit → ing.unit_use, then apply cost per unit_use
+      const loggedUnit = unit || ing.unit_use;
+      const qtyInIngUnit = (loggedUnit && loggedUnit !== ing.unit_use)
+        ? convertUnits(q, loggedUnit, ing.unit_use)
+        : q;
+      return qtyInIngUnit * getCostPerBaseUnit(ing);
     } else {
       const rec = recipes.find(r => r.id === parseInt(itemId));
       if (!rec) return 0;
@@ -3093,7 +3116,7 @@ function WasteLog() {
 
   async function save() {
     if (!form.item_id || !form.quantity || !form.reason) return;
-    const cost = calcCost(form.type, form.item_id, form.quantity);
+    const cost = calcCost(form.type, form.item_id, form.quantity, form.unit);
     const entry = {
       type: form.type,
       item_id: parseInt(form.item_id),
@@ -3109,10 +3132,15 @@ function WasteLog() {
     if (error) { alert("Error guardando: " + error.message); return; }
 
     // Also deduct from ingredient stock if type is ingredient
+    // Convert the logged unit → unit_use before deducting
     if (form.type === "ingredient") {
       const ing = ingredients.find(i => i.id === parseInt(form.item_id));
       if (ing) {
-        const newStock = Math.max(0, (parseFloat(ing.stock) || 0) - parseFloat(form.quantity));
+        const loggedUnit = form.unit || ing.unit_use;
+        const qtyInIngUnit = (loggedUnit && loggedUnit !== ing.unit_use)
+          ? convertUnits(parseFloat(form.quantity) || 0, loggedUnit, ing.unit_use)
+          : (parseFloat(form.quantity) || 0);
+        const newStock = Math.max(0, (parseFloat(ing.stock) || 0) - qtyInIngUnit);
         await supabase.from("ingredients").update({ stock: newStock }).eq("id", ing.id);
       }
     }
@@ -3303,7 +3331,7 @@ function WasteLog() {
         {/* Cost preview */}
         {form.item_id && form.quantity && <div style={{background:"rgba(226,75,74,0.06)", border:"1px solid rgba(226,75,74,0.2)", borderRadius:8, padding:"10px 14px", fontSize:12, color:"#E24B4A"}}>
           <i className="ti ti-currency-dollar" style={{marginRight:6}}/>
-          {lang==="en"?"Estimated loss:":"Pérdida estimada:"} <strong>${calcCost(form.type, form.item_id, form.quantity).toFixed(2)}</strong>
+          {lang==="en"?"Estimated loss:":"Pérdida estimada:"} <strong>${calcCost(form.type, form.item_id, form.quantity, form.unit).toFixed(2)}</strong>
         </div>}
 
         {/* Notes */}
