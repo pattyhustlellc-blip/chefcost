@@ -2557,7 +2557,7 @@ function Invoices() {
       const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file)});
       setPct(40);setMsg(lang==="en"?"AI is analyzing your invoice...":"La IA está analizando tu factura...");
       const content=file.type.startsWith("image/")?[{type:"image",source:{type:"base64",media_type:file.type,data:b64}},{type:"text",text:PROMPT}]:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}},{type:"text",text:PROMPT}];
-      const res=await fetch("https://chefcost-proxy.patty-hustlellc.workers.dev",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,messages:[{role:"user",content}]})});
+      const res=await fetch("https://chefcost-proxy.patty-hustlellc.workers.dev",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:4000,messages:[{role:"user",content}]})});
       const data=await res.json();
       if(!res.ok){setSt("idle");setMsg(`Error API: ${data.error?.message||JSON.stringify(data)}`);return;}
       setPct(80);setMsg(lang==="en"?"Processing...":"Procesando...");
@@ -2576,7 +2576,7 @@ function Invoices() {
   async function confirmInvoice(itemsToConfirm, supplierName, invoiceDate){
     const rid = currentUser?.restaurant_id;
     const supplier = supplierName || itemsToConfirm[0]?.supplier || "Desconocido";
-    const total = "$"+itemsToConfirm.reduce((s,i)=>s+(parseFloat(i.total)||0),0).toFixed(2);
+    const total = fmt(itemsToConfirm.reduce((s,i)=>s+(parseFloat(i.total)||0),0), currency);
     const { data: invData, error: invError } = await supabase.from("invoices").insert({
       date: fixDate(invoiceDate || itemsToConfirm[0]?.date || new Date().toISOString().split("T")[0]),
       supplier, items: itemsToConfirm.length, total, line_items: itemsToConfirm, restaurant_id: rid,
