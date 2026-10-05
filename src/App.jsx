@@ -4319,8 +4319,6 @@ export default function App() {
   // When the PWA window closes and reopens, window.__chefcostSession is gone → login required.
   const [currentUser, setUserState] = useState(()=>{
     try {
-      // Only restore session if the in-memory flag is set (same JS process / tab)
-      if (!window.__chefcostSession) return null;
       const s = localStorage.getItem("chefcost_user");
       return s ? JSON.parse(s) : null;
     } catch(e){ return null; }
@@ -4329,10 +4327,8 @@ export default function App() {
     setUserState(u);
     try {
       if (u) {
-        window.__chefcostSession = true;
         localStorage.setItem("chefcost_user", JSON.stringify(u));
       } else {
-        window.__chefcostSession = false;
         localStorage.removeItem("chefcost_user");
       }
     } catch(e) {}
@@ -4551,8 +4547,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Onboarding wizard — shown once for new restaurants with no ingredients */}
-            {!onboardingDone && ingredients.length === 0 && (
+            {/* Onboarding wizard — shown once for new restaurants with no ingredients (only after DB loaded) */}
+            {!onboardingDone && !dbLoading && ingredients.length === 0 && (
               <Onboarding onDone={completeOnboarding}/>
             )}
 
