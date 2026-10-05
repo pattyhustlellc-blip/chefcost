@@ -829,7 +829,7 @@ function Dashboard() {
   const isMobile = useIsMobile();
   const [showAlerts, setShowAlerts] = useState(false);
   const calcs    = recipes.map(r => ({ ...r, ...calcRecipe(r, ingredients, recipes) }));
-  const menuDishes = calcs.filter(r => !r.is_subrecipe);
+  const menuDishes = calcs.filter(r => r.recipe_type !== "prep" && !r.is_subrecipe);
   const priceUp  = ingredients.filter(i => i.price > i.prev_price);
   const critical = ingredients.filter(i => parseFloat(i.stock) <= (parseFloat(i.min_stock)||5));
   const avgCost  = menuDishes.length ? menuDishes.reduce((s,r)=>s+r.cpp,0)/menuDishes.length : 0;
