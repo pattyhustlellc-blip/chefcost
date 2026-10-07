@@ -61,16 +61,15 @@ const UI = {
   previous:{es:"Anterior",en:"Previous"}, current:{es:"Actual",en:"Current"}, variation:{es:"Var.",en:"Var."},
   recipesByMargin:{es:"Recetas por margen",en:"Recipes by margin"}, dish:{es:"Plato",en:"Dish"},
   costPerPortion:{es:"Costo/porc.",en:"Cost/portion"}, sellPrice:{es:"P.Venta",en:"Sell price"}, margin:{es:"Margen",en:"Margin"},
-  criticalStock:{es:"Stock crítico",en:"Critical stock"}, totalIngredients:{es:"Ingredientes",en:"Ingredients"},
+  totalIngredients:{es:"Ingredientes",en:"Ingredients"},
   // Ingredients
   total:{es:"Total",en:"Total"}, pricesRose:{es:"Subieron precio",en:"Prices rose"}, suppliers:{es:"Proveedores",en:"Suppliers"},
   allSuppliers:{es:"Todos los proveedores",en:"All suppliers"}, name:{es:"Nombre",en:"Name"}, supplier:{es:"Proveedor",en:"Supplier"},
-  unitPurchase:{es:"U.Compra",en:"Buy unit"}, unitUse:{es:"U.Uso",en:"Use unit"}, unitInventory:{es:"U.Inv",en:"Stock unit"},
-  price:{es:"Precio",en:"Price"}, stock:{es:"Stock",en:"Stock"}, category:{es:"Categoría",en:"Category"},
+  unitPurchase:{es:"U.Compra",en:"Buy unit"}, unitUse:{es:"U.Uso",en:"Use unit"},
+  price:{es:"Precio",en:"Price"}, category:{es:"Categoría",en:"Category"},
   newIngredient:{es:"Nuevo ingrediente",en:"New ingredient"}, editIngredient:{es:"Editar ingrediente",en:"Edit ingredient"},
   currentPrice:{es:"Precio actual",en:"Current price"}, prevPrice:{es:"Precio anterior",en:"Previous price"},
-  unitsPerPack:{es:"Contenido del empaque",en:"Package contents"}, currentStock:{es:"Stock actual",en:"Current stock"},
-  minStock:{es:"Stock mínimo (alerta)",en:"Min stock (alert)"},
+  unitsPerPack:{es:"Contenido del empaque",en:"Package contents"},
   costPerUnit:{es:"Costo por unidad",en:"Cost per unit"},
   // Recipes
   newRecipe:{es:"Nueva receta",en:"New recipe"}, editRecipe:{es:"Editar receta",en:"Edit recipe"},
@@ -111,7 +110,7 @@ const UI = {
   totalItems:{es:"Total ítems",en:"Total items"}, pending:{es:"Pendientes",en:"Pending"}, alreadyBought:{es:"Ya comprado",en:"Already bought"},
   totalEst:{es:"Total est.",en:"Est. total"}, addItem:{es:"Agregar ítem",en:"Add item"}, regenerate:{es:"Regenerar",en:"Regenerate"},
   clearBought:{es:"Limpiar comprados",en:"Clear bought"}, note:{es:"Nota",en:"Note"}, optionalNote:{es:"opcional",en:"optional"},
-  addToList:{es:"Agregar a la lista",en:"Add to list"}, lowStock:{es:"⚡ Stock bajo",en:"⚡ Low stock"},
+  addToList:{es:"Agregar a la lista",en:"Add to list"},
   bought:{es:"comprados",en:"bought"}, subtotal:{es:"Subtotal",en:"Subtotal"}, estTotal:{es:"Total estimado",en:"Estimated total"},
   // Settings
   myAccount:{es:"Mi cuenta",en:"My account"}, users:{es:"Usuarios",en:"Users"}, signOut:{es:"Cerrar sesión",en:"Sign out"},
@@ -145,18 +144,18 @@ const INIT_USERS = [
 ];
 
 const INIT_INGREDIENTS = [
-  { id:1,  name:"Carne molida",   category:"carnes",      supplier:"Restaurant Depot", unit_purchase:"lb",    unit_use:"oz",    unit_inventory:"lb",    price:4.99,  prev_price:4.50, pack_size:null, stock:12,   min_stock:10 },
-  { id:2,  name:"Pollo",          category:"carnes",      supplier:"Restaurant Depot", unit_purchase:"lb",    unit_use:"oz",    unit_inventory:"lb",    price:2.57,  prev_price:2.40, pack_size:null, stock:9.23, min_stock:10 },
-  { id:3,  name:"Queso cheddar",  category:"lacteos",     supplier:"Sysco",            unit_purchase:"lb",    unit_use:"oz",    unit_inventory:"lb",    price:3.50,  prev_price:3.80, pack_size:null, stock:2,    min_stock:5 },
-  { id:4,  name:"Crema ácida",    category:"lacteos",     supplier:"Sysco",            unit_purchase:"lb",    unit_use:"oz",    unit_inventory:"lb",    price:2.10,  prev_price:2.10, pack_size:null, stock:1,    min_stock:3 },
-  { id:5,  name:"Lechuga romana", category:"vegetales",   supplier:"Farmer's Market",  unit_purchase:"bolsa", unit_use:"ct",    unit_inventory:"ct",    price:1.25,  prev_price:1.10, pack_size:3,    stock:4,    min_stock:5 },
-  { id:6,  name:"Aguacate",       category:"vegetales",   supplier:"Farmer's Market",  unit_purchase:"ct",    unit_use:"ct",    unit_inventory:"ct",    price:1.10,  prev_price:0.85, pack_size:null, stock:3,    min_stock:10 },
-  { id:7,  name:"Cilantro",       category:"vegetales",   supplier:"Farmer's Market",  unit_purchase:"manojo",unit_use:"manojo",unit_inventory:"manojo", price:0.75,  prev_price:0.80, pack_size:null, stock:5,    min_stock:5 },
-  { id:8,  name:"Tomate",         category:"vegetales",   supplier:"Farmer's Market",  unit_purchase:"lb",    unit_use:"oz",    unit_inventory:"lb",    price:1.30,  prev_price:1.30, pack_size:null, stock:6,    min_stock:8 },
-  { id:9,  name:"Pan HD Roll",    category:"panaderia",   supplier:"Local Bakery",     unit_purchase:"bolsa", unit_use:"ct",    unit_inventory:"ct",    price:3.99,  prev_price:3.50, pack_size:8,    stock:18,   min_stock:16 },
-  { id:10, name:'Tortilla 8"',    category:"panaderia",   supplier:"Local Bakery",     unit_purchase:"bolsa", unit_use:"ct",    unit_inventory:"ct",    price:5.40,  prev_price:5.40, pack_size:30,   stock:72,   min_stock:60 },
-  { id:11, name:"Chile jalapeño", category:"condimentos", supplier:"Farmer's Market",  unit_purchase:"ct",    unit_use:"ct",    unit_inventory:"ct",    price:0.35,  prev_price:0.30, pack_size:null, stock:5,    min_stock:10 },
-  { id:12, name:"Aceite vegetal", category:"aceites",     supplier:"Restaurant Depot", unit_purchase:"gal",   unit_use:"tbsp",  unit_inventory:"gal",   price:8.99,  prev_price:8.50, pack_size:null, stock:2,    min_stock:3 },
+  { id:1,  name:"Carne molida",   category:"carnes",      supplier:"Restaurant Depot", unit_purchase:"lb",    unit_use:"oz",    price:4.99,  prev_price:4.50, pack_size:null },
+  { id:2,  name:"Pollo",          category:"carnes",      supplier:"Restaurant Depot", unit_purchase:"lb",    unit_use:"oz",    price:2.57,  prev_price:2.40, pack_size:null },
+  { id:3,  name:"Queso cheddar",  category:"lacteos",     supplier:"Sysco",            unit_purchase:"lb",    unit_use:"oz",    price:3.50,  prev_price:3.80, pack_size:null },
+  { id:4,  name:"Crema ácida",    category:"lacteos",     supplier:"Sysco",            unit_purchase:"lb",    unit_use:"oz",    price:2.10,  prev_price:2.10, pack_size:null },
+  { id:5,  name:"Lechuga romana", category:"vegetales",   supplier:"Farmer's Market",  unit_purchase:"bolsa", unit_use:"ct",    price:1.25,  prev_price:1.10, pack_size:3    },
+  { id:6,  name:"Aguacate",       category:"vegetales",   supplier:"Farmer's Market",  unit_purchase:"ct",    unit_use:"ct",    price:1.10,  prev_price:0.85, pack_size:null },
+  { id:7,  name:"Cilantro",       category:"vegetales",   supplier:"Farmer's Market",  unit_purchase:"manojo",unit_use:"manojo",price:0.75,  prev_price:0.80, pack_size:null },
+  { id:8,  name:"Tomate",         category:"vegetales",   supplier:"Farmer's Market",  unit_purchase:"lb",    unit_use:"oz",    price:1.30,  prev_price:1.30, pack_size:null },
+  { id:9,  name:"Pan HD Roll",    category:"panaderia",   supplier:"Local Bakery",     unit_purchase:"bolsa", unit_use:"ct",    price:3.99,  prev_price:3.50, pack_size:8    },
+  { id:10, name:'Tortilla 8"',    category:"panaderia",   supplier:"Local Bakery",     unit_purchase:"bolsa", unit_use:"ct",    price:5.40,  prev_price:5.40, pack_size:30   },
+  { id:11, name:"Chile jalapeño", category:"condimentos", supplier:"Farmer's Market",  unit_purchase:"ct",    unit_use:"ct",    price:0.35,  prev_price:0.30, pack_size:null },
+  { id:12, name:"Aceite vegetal", category:"aceites",     supplier:"Restaurant Depot", unit_purchase:"gal",   unit_use:"tbsp",  price:8.99,  prev_price:8.50, pack_size:null },
 ];
 
 const INIT_RECIPES = [
@@ -626,12 +625,9 @@ function Onboarding({ onDone }) {
       supplier: ing.supplier || "",
       unit_purchase: ing.unit_purchase,
       unit_use: ing.unit_use,
-      unit_inventory: ing.unit_use,
       price: parseFloat(ing.price),
       prev_price: parseFloat(ing.price),
       pack_size: parseFloat(ing.pack_size) || 1,
-      stock: 0,
-      min_stock: 5,
       restaurant_id: rid,
     };
     const { data, error } = await supabase.from("ingredients").insert(row).select().single();
@@ -890,7 +886,6 @@ function Dashboard() {
   const calcs    = recipes.map(r => ({ ...r, ...calcRecipe(r, ingredients, recipes) }));
   const menuDishes = calcs.filter(r => r.recipe_type !== "prep" && !r.is_subrecipe);
   const priceUp  = ingredients.filter(i => i.price > i.prev_price);
-  const critical = ingredients.filter(i => parseFloat(i.stock) <= (parseFloat(i.min_stock)||5));
   const avgCost  = menuDishes.length ? menuDishes.reduce((s,r)=>s+r.cpp,0)/menuDishes.length : 0;
   // Dishes where actual food cost % exceeds target (default: target margin 70% → max food cost 30%)
   const offTarget = menuDishes.filter(r => {
@@ -1024,31 +1019,6 @@ function Dashboard() {
                   {unpriced.length > 2 && <span style={{ fontSize:10, color:TEXT2 }}>+{unpriced.length-2} {lang==="en"?"more":"más"}</span>}
                 </div>
                 <i className="ti ti-chevron-right" style={{ fontSize:14, color:ACCENT }}/>
-              </div>
-            )}
-
-            {/* Stock critical alert banner */}
-            {critical.length > 0 && (
-              <div style={{ background:"rgba(239,159,39,0.06)", border:"1px solid rgba(239,159,39,0.35)", borderRadius:10, padding:"10px 16px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={()=>setPage("ingredients")}>
-                <i className="ti ti-alert-triangle" style={{ fontSize:16, color:"#EF9F27", flexShrink:0 }}/>
-                <div style={{ flex:1 }}>
-                  <span style={{ fontSize:13, fontWeight:600, color:"#b07a00" }}>
-                    {critical.length} {lang==="en" ? (critical.length===1?"ingredient is":"ingredients are") : (critical.length===1?"ingrediente en":"ingredientes en")} {lang==="en"?"low stock":"stock crítico"}
-                  </span>
-                  <span style={{ fontSize:11, color:TEXT2, marginLeft:8 }}>
-                    {lang==="en"?"Restock soon to avoid running out":"Reabastece pronto para no quedarte sin"}
-                  </span>
-                </div>
-                <div style={{ display:"flex", flexDirection:"column", gap:2, alignItems:"flex-end" }}>
-                  {critical.slice(0,2).map(ing => (
-                    <span key={ing.id} style={{ fontSize:11, color:TEXT2 }}>
-                      <b style={{ color:TEXT }}>{ing.name}</b>
-                      <span style={{ color:"#b07a00", marginLeft:4 }}>{parseFloat(ing.stock).toFixed(1)} {ing.unit_inventory||ing.unit_use}</span>
-                    </span>
-                  ))}
-                  {critical.length > 2 && <span style={{ fontSize:10, color:TEXT2 }}>+{critical.length-2} {lang==="en"?"more":"más"}</span>}
-                </div>
-                <i className="ti ti-chevron-right" style={{ fontSize:14, color:"#EF9F27" }}/>
               </div>
             )}
 
@@ -1367,12 +1337,10 @@ function Ingredients() {
     const keeper = group.items.find(i => i.id === group.keepId);
     const others = group.items.filter(i => i.id !== group.keepId);
     if (!keeper) return;
-    // Sum stocks and take most recent price
-    const totalStock = group.items.reduce((s, i) => s + (parseFloat(i.stock) || 0), 0);
+    // Take most recent price
     const mostRecentPrice = group.items.reduce((best, i) => parseFloat(i.price) > parseFloat(best.price) ? i : best, keeper);
     // Update keeper with merged data
     const { error: updErr } = await supabase.from("ingredients").update({
-      stock: totalStock,
       price: mostRecentPrice.price,
       prev_price: keeper.price,
     }).eq("id", keeper.id);
@@ -1384,7 +1352,7 @@ function Ingredients() {
     // Update local state
     setIngredients(prev => {
       const filtered = prev.filter(i => !others.find(o => o.id === i.id));
-      return filtered.map(i => i.id === keeper.id ? { ...i, stock: totalStock, price: mostRecentPrice.price, prev_price: keeper.price } : i);
+      return filtered.map(i => i.id === keeper.id ? { ...i, price: mostRecentPrice.price, prev_price: keeper.price } : i);
     });
     setDupGroups(prev => prev.filter(g => g.keepId !== group.keepId));
   }
@@ -1417,7 +1385,7 @@ function Ingredients() {
     } else {
       if (newPrice > 0) priceHistory = [{ date: new Date().toISOString().slice(0,10), price: newPrice }];
     }
-    const clean = { ...u, restaurant_id: rid, price:newPrice, prev_price:parseFloat(u.prev_price)||0, pack_size:u.pack_size?parseFloat(u.pack_size):null, stock:parseFloat(u.stock)||0, min_stock:parseFloat(u.min_stock)||5, price_history: JSON.stringify(priceHistory) };
+    const clean = { ...u, restaurant_id: rid, price:newPrice, prev_price:parseFloat(u.prev_price)||0, pack_size:u.pack_size?parseFloat(u.pack_size):null, price_history: JSON.stringify(priceHistory) };
     if (isExisting) {
       const { id, ...updateFields } = clean;
       let { error } = await supabase.from("ingredients").update(updateFields).eq("id", id);
@@ -1448,7 +1416,7 @@ function Ingredients() {
   }
 
   const du = defaultUnits(unitSystem);
-  const blank = { name:"", category:"carnes", supplier:"", unit_purchase:du.unit_purchase, unit_use:du.unit_use, unit_inventory:du.unit_purchase, price:"", prev_price:"", pack_size:"", stock:0, min_stock:5 };
+  const blank = { name:"", category:"carnes", supplier:"", unit_purchase:du.unit_purchase, unit_use:du.unit_use, price:"", prev_price:"", pack_size:"" };
 
   return (
     <div style={{ padding:20, display:"flex", flexDirection:"column", gap:16 }}>
@@ -1456,8 +1424,7 @@ function Ingredients() {
         {[
           { label:t("total",lang),          value:ingredients.length,                                       color:TEXT },
           { label:t("pricesRose",lang),value:ingredients.filter(i=>i.price>i.prev_price).length,       color:"#E24B4A" },
-          { label:t("criticalStock",lang),  value:ingredients.filter(i=>parseFloat(i.stock)<=(parseFloat(i.min_stock)||5)).length,     color:"#EF9F27" },
-          { label:t("suppliers",lang),    value:[...new Set(ingredients.map(i=>i.supplier))].length,       color:ACCENT },
+          { label:t("suppliers",lang),    value:[...new Set(ingredients.map(i=>i.supplier).filter(Boolean))].length,   color:ACCENT },
         ].map((s,i) => (
           <div key={i} style={{ background:SURF, border:`1px solid ${BDR}`, borderRadius:10, padding:"12px 14px" }}>
             <div style={{ fontSize:10, color:TEXT2, marginBottom:4 }}>{s.label}</div>
@@ -1509,7 +1476,7 @@ function Ingredients() {
                   <div style={{width:16,height:16,borderRadius:"50%",border:`2px solid ${group.keepId===ing.id?ACCENT:BDR}`,background:group.keepId===ing.id?ACCENT:"transparent",flexShrink:0}}/>
                   <div style={{flex:1}}>
                     <div style={{fontSize:12,fontWeight:600}}>{ing.name}</div>
-                    <div style={{fontSize:10,color:TEXT2}}>{ing.supplier} · {currency}{ing.price}/{ing.unit_use} · stock: {ing.stock} {ing.unit_inventory}</div>
+                    <div style={{fontSize:10,color:TEXT2}}>{ing.supplier} · {currency}{ing.price}/{ing.unit_use}</div>
                   </div>
                   {group.keepId===ing.id&&<span style={{fontSize:10,background:"rgba(200,49,43,0.10)",color:ACCENT,padding:"2px 8px",borderRadius:99,fontWeight:700}}>{lang==="en"?"KEEP":"CONSERVAR"}</span>}
                 </div>
@@ -1517,7 +1484,7 @@ function Ingredients() {
             </div>
             <div style={{marginTop:8,fontSize:10,color:TEXT2}}>
               <i className="ti ti-info-circle" style={{marginRight:4}}/>
-              {lang==="en"?"Stocks will be summed. Most recent price will be kept.":"Se sumarán los stocks. Se conservará el precio más reciente."}
+              {lang==="en"?"Most recent price will be kept.":"Se conservará el precio más reciente."}
             </div>
           </div>
         ))}
@@ -1530,28 +1497,24 @@ function Ingredients() {
             <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
               <thead><tr>
                 <th style={g.th}>{t("name",lang)}</th><th style={g.th}>{t("supplier",lang)}</th>
-                <th style={g.th}>{t("unitPurchase",lang)}</th><th style={g.th}>{t("unitUse",lang)}</th><th style={g.th}>{t("unitInventory",lang)}</th>
+                <th style={g.th}>{t("unitPurchase",lang)}</th><th style={g.th}>{t("unitUse",lang)}</th>
                 <th style={g.th}>{t("price",lang)}</th><th style={g.th}>{t("previous",lang)}</th><th style={g.th}>{t("variation",lang)}</th>
                 <th style={{...g.th,minWidth:66}}>{lang==="en"?"Trend":"Tendencia"}</th>
-                <th style={g.th}>{t("stock",lang)}</th><th style={g.th}>{t("actions",lang)}</th>
+                <th style={g.th}>{t("actions",lang)}</th>
               </tr></thead>
               <tbody>
                 {cat.items.map(ing => {
                   const d  = priceDiff(ing.price, ing.prev_price);
-                  const minSt = parseFloat(ing.min_stock)||5;
-                  const st = parseFloat(ing.stock)<=minSt?"err":parseFloat(ing.stock)<=minSt*1.5?"warn":"ok";
                   return (
                     <tr key={ing.id} onMouseEnter={e=>e.currentTarget.style.background=SURF2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <td style={{...g.td,fontWeight:500}}>{ing.name}</td>
                       <td style={{...g.td,color:TEXT2}}>{ing.supplier}</td>
                       <td style={g.td}><span style={g.badge("gray")}>{ing.unit_purchase}</span></td>
                       <td style={g.td}><span style={g.badge("gray")}>{ing.unit_use}</span></td>
-                      <td style={g.td}><span style={g.badge("gray")}>{ing.unit_inventory}</span></td>
                       <td style={{...g.td,fontWeight:700,color:ACCENT}}>{fmt(ing.price,currency)}</td>
                       <td style={{...g.td,color:TEXT2}}>{fmt(ing.prev_price,currency)}</td>
                       <td style={g.td}><span style={g.pp(d.up,d.same)}>{d.same?"—":<>{d.up?"+":"-"}{d.pct}%</>}</span></td>
                       <td style={{...g.td,paddingTop:4,paddingBottom:4}}><PriceSparkline ingredient={ing}/></td>
-                      <td style={g.td}><span style={g.badge(st)}>{ing.stock} {ing.unit_inventory}</span></td>
                       <td style={g.td}>
                         <div style={{display:"flex",gap:5}}>
                           <button style={g.btnI} onClick={()=>setEd(ing)}><i className="ti ti-pencil" style={{fontSize:12}}/>{t("edit",lang)}</button>
@@ -1602,17 +1565,15 @@ function IngModal({ item, onSave, onClose, isNew, lang }) {
           <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("prevPrice",lang)}</label><input style={g.inp} type="text" inputMode="decimal" value={f.prev_price} onChange={e=>sf("prev_price",e.target.value)}/></div>
         </div>
         <div style={{display:"flex",gap:10}}>
-          {["unit_purchase","unit_use","unit_inventory"].map(k=>(
+          {["unit_purchase","unit_use"].map(k=>(
             <div key={k} style={{flex:1,display:"flex",flexDirection:"column",gap:5}}>
-              <label style={g.lbl}>{k==="unit_purchase"?t("unitPurchase",lang):k==="unit_use"?t("unitUse",lang):t("unitInventory",lang)}</label>
+              <label style={g.lbl}>{k==="unit_purchase"?t("unitPurchase",lang):t("unitUse",lang)}</label>
               <select style={{...g.sel,width:"100%"}} value={f[k]} onChange={e=>sf(k,e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select>
             </div>
           ))}
         </div>
         <div style={{display:"flex",gap:10}}>
           <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("unitsPerPack",lang)}</label><input style={g.inp} type="text" inputMode="decimal" placeholder={lang==="en"?"e.g: 169 fl oz":"ej: 169 fl oz"} value={f.pack_size||""} onChange={e=>sf("pack_size",e.target.value)}/></div>
-          <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("currentStock",lang)}</label><input style={g.inp} type="text" inputMode="decimal" value={f.stock} onChange={e=>sf("stock",e.target.value)}/></div>
-          <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("minStock",lang)}</label><input style={g.inp} type="text" inputMode="decimal" placeholder="5" value={f.min_stock??""} onChange={e=>sf("min_stock",e.target.value)}/></div>
         </div>
         {needsPackSize && <div style={{fontSize:11,color:FC_WARN,background:WARN_BG,border:`1px solid ${WARN_BDR}`,padding:"8px 12px",borderRadius:8}}>
           <i className="ti ti-alert-triangle" style={{marginRight:6}}/>
@@ -1662,9 +1623,6 @@ function exportIngredients(ingredients, lang) {
     [lang==="en"?"Price":"Precio"]:              parseFloat(ing.price)||0,
     [lang==="en"?"Prev price":"Precio anterior"]: parseFloat(ing.prev_price)||0,
     [lang==="en"?"Pack size":"Tamaño paquete"]:  ing.pack_size || "",
-    [lang==="en"?"Stock":"Stock"]:               parseFloat(ing.stock)||0,
-    [lang==="en"?"Min stock":"Stock mínimo"]:    parseFloat(ing.min_stock)||5,
-    [lang==="en"?"Inventory unit":"Unidad inventario"]: ing.unit_inventory || "",
   }));
   exportExcel(rows, lang==="en"?"Ingredients":"Ingredientes", `ChefCost_Ingredients_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
@@ -2539,7 +2497,7 @@ function Invoices() {
   const [selectedInv, setSelectedInv] = useState(null);
   const ref=useRef();
   const _du = defaultUnits(unitSystem);
-  const blankItem = {id:Date.now(),name:"",category:"otros",qty:"",unit_purchase:_du.unit_purchase,unit_use:_du.unit_use,unit_inventory:_du.unit_purchase,pack_size:"",unit_price:"",total:"",supplier:"",grouped:false};
+  const blankItem = {id:Date.now(),name:"",category:"otros",qty:"",unit_purchase:_du.unit_purchase,unit_use:_du.unit_use,pack_size:"",unit_price:"",total:"",supplier:"",grouped:false};
   const [manualSupplier, setManualSupplier] = useState("");
   const [manualDate, setManualDate] = useState(new Date().toISOString().split("T")[0]);
   const [manualItems, setManualItems] = useState([{...blankItem, id:Date.now()}]);
@@ -2568,7 +2526,7 @@ function Invoices() {
       if (firstBrace !== -1 && lastBrace !== -1) jsonText = jsonText.substring(firstBrace, lastBrace + 1);
       const parsed=JSON.parse(jsonText);
       setPct(100);setMsg(lang==="en"?"Done!":"¡Listo!");
-      setExt((parsed.items||[]).map((item,i)=>({...item,id:i,supplier:parsed.supplier||"Desconocido",date:parsed.date||new Date().toISOString().split("T")[0],unit_purchase:item.unit||"ct",unit_use:item.unit||"ct",unit_inventory:item.unit||"ct",pack_size:item.pack_size||null})));
+      setExt((parsed.items||[]).map((item,i)=>({...item,id:i,supplier:parsed.supplier||"Desconocido",date:parsed.date||new Date().toISOString().split("T")[0],unit_purchase:item.unit||"ct",unit_use:item.unit||"ct",pack_size:item.pack_size||null})));
       setSt("review");
     }catch(e){setSt("idle");setMsg(`Error: ${e.message||e}`);}
   }
@@ -2590,11 +2548,11 @@ function Invoices() {
       const packSize=parseFloat(item.pack_size)||0;
       const unitsReceived=packSize>0?qtyReceived*packSize:qtyReceived;
       if (ex) {
-        const updateFields = { prev_price:ex.price, price:parseFloat(item.unit_price)||ex.price, pack_size:item.pack_size?parseFloat(item.pack_size):ex.pack_size, stock:(parseFloat(ex.stock)||0)+unitsReceived };
+        const updateFields = { prev_price:ex.price, price:parseFloat(item.unit_price)||ex.price, pack_size:item.pack_size?parseFloat(item.pack_size):ex.pack_size };
         const { error } = await supabase.from("ingredients").update(updateFields).eq("id", ex.id);
         if (!error) { const idx=updatedIngredients.findIndex(i=>i.id===ex.id); updatedIngredients[idx]={...ex,...updateFields}; }
       } else {
-        const insertFields = { name:item.name, category:item.category||"otros", supplier:item.supplier||supplier, unit_purchase:item.unit_purchase, unit_use:item.unit_use, unit_inventory:item.unit_inventory, price:parseFloat(item.unit_price)||0, prev_price:parseFloat(item.unit_price)||0, pack_size:item.pack_size?parseFloat(item.pack_size):null, stock:unitsReceived, min_stock:5, restaurant_id: rid };
+        const insertFields = { name:item.name, category:item.category||"otros", supplier:item.supplier||supplier, unit_purchase:item.unit_purchase, unit_use:item.unit_use, price:parseFloat(item.unit_price)||0, prev_price:parseFloat(item.unit_price)||0, pack_size:item.pack_size?parseFloat(item.pack_size):null, restaurant_id: rid };
         const { data, error } = await supabase.from("ingredients").insert(insertFields).select().single();
         if (!error && data) updatedIngredients.push(data);
       }
@@ -2632,25 +2590,7 @@ function Invoices() {
   }
 
   async function removeInvoice(inv) {
-    if (!window.confirm(lang==="en"?`Delete invoice from ${inv.supplier} (${inv.date})? This will revert the stock of all ingredients in this invoice.`:`¿Eliminar factura de ${inv.supplier} (${inv.date})? Esto revertirá el stock de todos los ingredientes de esta factura.`)) return;
-    // Revert stock for each line item
-    if (inv.line_items && inv.line_items.length > 0) {
-      const updatedIngredients = [...ingredients];
-      for (const item of inv.line_items) {
-        const ex = updatedIngredients.find(i=>i.name.toLowerCase()===item.name.toLowerCase());
-        if (!ex) continue;
-        const qtyReceived = parseFloat(item.qty)||0;
-        const packSize = parseFloat(item.pack_size)||0;
-        const unitsToRevert = packSize>0?qtyReceived*packSize:qtyReceived;
-        const newStock = Math.max(0, (parseFloat(ex.stock)||0) - unitsToRevert);
-        const { error } = await supabase.from("ingredients").update({ stock: newStock }).eq("id", ex.id);
-        if (!error) {
-          const idx = updatedIngredients.findIndex(i=>i.id===ex.id);
-          updatedIngredients[idx] = {...ex, stock: newStock};
-        }
-      }
-      setIngredients(updatedIngredients);
-    }
+    if (!window.confirm(lang==="en"?`Delete invoice from ${inv.supplier} (${inv.date})?`:`¿Eliminar factura de ${inv.supplier} (${inv.date})?`)) return;
     // Delete invoice record
     const { error } = await supabase.from("invoices").delete().eq("id", inv.id);
     if (error) { alert("Error eliminando factura: "+error.message); return; }
@@ -2705,7 +2645,7 @@ function Invoices() {
               <thead><tr>
                 <th style={g.th}>{t("ingredient",lang)}</th><th style={g.th}>{t("category",lang)}</th>
                 <th style={g.th}>{t("qty",lang)}</th><th style={g.th}>{t("unitPurchase",lang)}</th>
-                <th style={g.th}>{t("unitUse",lang)}</th><th style={g.th}>{t("unitInventory",lang)}</th>
+                <th style={g.th}>{t("unitUse",lang)}</th>
                 <th style={g.th}>{lang==="en"?"Pack size":"Tamaño empaque"}</th>
                 <th style={g.th}>{t("unitPrice",lang)}</th><th style={g.th}>{lang==="en"?"$/base unit":"$/unidad base"}</th>
                 <th style={g.th}>{t("totalCol",lang)}</th><th style={g.th}>{t("action",lang)}</th>
@@ -2722,7 +2662,6 @@ function Invoices() {
                       <td style={g.td}><input style={{...g.inp,width:55}} type="text" inputMode="decimal" value={item.qty} onChange={e=>upd(item.id,"qty",e.target.value)}/></td>
                       <td style={g.td}><select style={{...g.sel,width:78}} value={item.unit_purchase} onChange={e=>upd(item.id,"unit_purchase",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select></td>
                       <td style={g.td}><select style={{...g.sel,width:78}} value={item.unit_use} onChange={e=>upd(item.id,"unit_use",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select></td>
-                      <td style={g.td}><select style={{...g.sel,width:78}} value={item.unit_inventory} onChange={e=>upd(item.id,"unit_inventory",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select></td>
                       <td style={g.td}><div style={{display:"flex",alignItems:"center",gap:4}}><input style={{...g.inp,width:55}} type="text" inputMode="decimal" placeholder="0" value={item.pack_size||""} onChange={e=>upd(item.id,"pack_size",e.target.value)}/><span style={{fontSize:10,color:TEXT2}}>{item.unit_use}</span></div></td>
                       <td style={g.td}><input style={{...g.inp,width:65}} type="text" inputMode="decimal" value={item.unit_price} onChange={e=>upd(item.id,"unit_price",e.target.value)}/></td>
                       <td style={g.td}>{costPerBase?<span style={{color:ACCENT,fontWeight:700}}>{currency}{costPerBase}</span>:<span style={{color:TEXT2,fontSize:10}}>{lang==="en"?"Add pack size":"Agrega tamaño"}</span>}</td>
@@ -2765,7 +2704,7 @@ function Invoices() {
               <thead><tr>
                 <th style={g.th}>{t("ingredient",lang)}</th><th style={g.th}>{t("category",lang)}</th>
                 <th style={g.th}>{t("qty",lang)}</th><th style={g.th}>{t("unitPurchase",lang)}</th>
-                <th style={g.th}>{t("unitUse",lang)}</th><th style={g.th}>{t("unitInventory",lang)}</th>
+                <th style={g.th}>{t("unitUse",lang)}</th>
                 <th style={g.th}>{lang==="en"?"Pack size":"Tamaño empaque"}</th>
                 <th style={g.th}>{t("unitPrice",lang)}</th><th style={g.th}>{t("totalCol",lang)}</th>
                 <th style={g.th}></th>
@@ -2780,7 +2719,6 @@ function Invoices() {
                       <td style={g.td}><input style={{...g.inp,width:55}} type="text" inputMode="decimal" placeholder="0" value={item.qty} onChange={e=>updManual(item.id,"qty",e.target.value)}/></td>
                       <td style={g.td}><select style={{...g.sel,width:78}} value={item.unit_purchase} onChange={e=>updManual(item.id,"unit_purchase",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select></td>
                       <td style={g.td}><select style={{...g.sel,width:78}} value={item.unit_use} onChange={e=>updManual(item.id,"unit_use",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select></td>
-                      <td style={g.td}><select style={{...g.sel,width:78}} value={item.unit_inventory} onChange={e=>updManual(item.id,"unit_inventory",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select></td>
                       <td style={g.td}><div style={{display:"flex",alignItems:"center",gap:4}}><input style={{...g.inp,width:55}} type="text" inputMode="decimal" placeholder="0" value={item.pack_size||""} onChange={e=>updManual(item.id,"pack_size",e.target.value)}/><span style={{fontSize:10,color:TEXT2}}>{item.unit_use}</span></div></td>
                       <td style={g.td}><input style={{...g.inp,width:65}} type="text" inputMode="decimal" placeholder="0.00" value={item.unit_price} onChange={e=>updManual(item.id,"unit_price",e.target.value)}/></td>
                       <td style={{...g.td,color:ACCENT,fontWeight:700}}>{fmt(total,currency)}</td>
@@ -2854,7 +2792,7 @@ function Inventory() {
   async function save(){
     const snap={...counts};
     setSaved(snap);
-    // Calculate total value of this count before updating stock
+    // Calculate total value of this count
     const newTotalVal=ingredients.reduce((s,ing)=>{
       const c=snap[ing.id];
       if(!c) return s;
@@ -2872,18 +2810,6 @@ function Inventory() {
     if (countError) { alert("Error guardando conteo: "+countError.message); return; }
     setHistory(p=>[{date:new Date().toLocaleDateString(),totalVal:newTotalVal},...p]);
 
-    // Update stock in Ingredients (both locally and in Supabase)
-    const updatedIngredients=[];
-    for (const ing of ingredients) {
-      const c=snap[ing.id];
-      if(!c) { updatedIngredients.push(ing); continue; }
-      const sealed=parseFloat(c.sealed)||0;
-      const loose=parseFloat(c.loose)||0;
-      const newStock=(ing.pack_size?sealed*ing.pack_size:sealed)+loose;
-      const { error } = await supabase.from("ingredients").update({ stock: newStock }).eq("id", ing.id);
-      updatedIngredients.push(error ? ing : {...ing, stock:newStock});
-    }
-    setIngredients(updatedIngredients);
     setMode("saved");
   }
   const dc=mode==="saved"?saved:mode==="counting"?counts:null;
@@ -2990,8 +2916,7 @@ function Inventory() {
 function Shopping() {
   const { ingredients, lang, currency, unitSystem, mainSupplier, orderDays } = useApp();
   const _shopDu = defaultUnits(unitSystem);
-  const auto = ingredients.filter(i=>parseFloat(i.stock)<(parseFloat(i.min_stock)||5)).map(i=>({id:i.id,name:i.name,category:i.category,unit:i.unit_purchase,price:i.price,qty:Math.max((parseFloat(i.min_stock)||5)-parseFloat(i.stock||0),1),auto:true,checked:false,note:"",supplier:i.supplier||"",group:i.supplier===mainSupplier?"provider":"storerun"}));
-  const [items,setItems]=useState(auto);
+  const [items,setItems]=useState([]);
   const [showAdd,setShowAdd]=useState(false);
   const [ni,setNI]=useState({name:"",category:"carnes",unit:_shopDu.unit_purchase,qty:"",price:"",note:"",group:"storerun"});
   const [fCat,setFC]=useState("all");
@@ -3095,7 +3020,6 @@ function Shopping() {
               <div style={{flex:1,cursor:"pointer"}} onClick={()=>toggle(item.id)}>
                 <div style={{fontSize:13,fontWeight:500,textDecoration:item.checked?"line-through":"none"}}>{item.name}</div>
                 <div style={{display:"flex",gap:6,marginTop:2}}>
-                  {item.auto&&<span style={g.badge("warn")}>{t("lowStock",lang)}</span>}
                   {item.group==="provider"&&<span style={{fontSize:9,background:"rgba(200,49,43,0.10)",color:ACCENT,padding:"1px 6px",borderRadius:99,fontWeight:600}}>📦 {mainSupplier}</span>}
                   {item.group==="storerun"&&<span style={{fontSize:9,background:"rgba(55,138,221,0.15)",color:"#378ADD",padding:"1px 6px",borderRadius:99,fontWeight:600}}>🛒 Store Run</span>}
                   {item.note&&<span style={{fontSize:10,color:TEXT2,fontStyle:"italic"}}>"{item.note}"</span>}
@@ -3196,20 +3120,6 @@ function WasteLog() {
     };
     const { data, error } = await supabase.from("waste_log").insert(entry).select().single();
     if (error) { alert("Error guardando: " + error.message); return; }
-
-    // Also deduct from ingredient stock if type is ingredient
-    // Convert the logged unit → unit_use before deducting
-    if (form.type === "ingredient") {
-      const ing = ingredients.find(i => i.id === parseInt(form.item_id));
-      if (ing) {
-        const loggedUnit = form.unit || ing.unit_use;
-        const qtyInIngUnit = (loggedUnit && loggedUnit !== ing.unit_use)
-          ? convertUnits(parseFloat(form.quantity) || 0, loggedUnit, ing.unit_use)
-          : (parseFloat(form.quantity) || 0);
-        const newStock = Math.max(0, (parseFloat(ing.stock) || 0) - qtyInIngUnit);
-        await supabase.from("ingredients").update({ stock: newStock }).eq("id", ing.id);
-      }
-    }
 
     setLogs(p => [data, ...p]);
     setForm({ type:"ingredient", item_id:"", item_name:"", quantity:"", unit:"", reason:"", notes:"" });
@@ -3498,13 +3408,7 @@ function ShoppingList() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-  // Ingredientes en stock crítico que aún no están en la lista
-  const suggestions = ingredients.filter(ing => {
-    const stock = parseFloat(ing.stock) || 0;
-    const alert = parseFloat(ing.stock_alert) || 0;
-    if (alert <= 0 || stock > alert) return false;
-    return !items.some(it => it.name === ing.name);
-  });
+  // Agregar ítem a la lista
 
   async function addItem(overrideData) {
     const rid = currentUser?.restaurant_id;
@@ -3541,26 +3445,6 @@ function ShoppingList() {
   }
 
   // Agregar todos los sugeridos de una vez
-  async function addAllSuggestions() {
-    const rid = currentUser?.restaurant_id;
-    const toInsert = suggestions.map(ing => ({
-      name: ing.name,
-      quantity: "",
-      unit: ing.unit_purchase || ing.unit_use || "",
-      supplier: ing.supplier || (lang==="en"?"Other":"Otro"),
-      checked: false,
-      restaurant_id: rid,
-    }));
-    if (!toInsert.length) return;
-    const { data, error } = await supabase.from("shopping_list").insert(toInsert).select();
-    if (error) { alert("Error: "+error.message); return; }
-    setItems(p=>{
-      const newItems = [...p, ...data];
-      setPendingShopping(newItems.filter(i=>!i.checked).length);
-      return newItems;
-    });
-    showToast(lang==="en"?`✓ ${data.length} items added`:`✓ ${data.length} ítems agregados`);
-  }
 
   async function toggle(id, checked) {
     await supabase.from("shopping_list").update({ checked: !checked }).eq("id", id);
@@ -3662,46 +3546,6 @@ function ShoppingList() {
   return (
     <div style={{padding:20, display:"flex", flexDirection:"column", gap:14}}>
 
-      {/* Banner de stock crítico — sugerencias automáticas */}
-      {!loading && suggestions.length > 0 && (
-        <div style={{background:"rgba(239,159,39,0.06)", border:"1px solid rgba(239,159,39,0.35)", borderRadius:10, padding:"12px 14px", display:"flex", flexDirection:"column", gap:10}}>
-          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:10}}>
-            <div style={{display:"flex", alignItems:"center", gap:8}}>
-              <i className="ti ti-alert-triangle" style={{fontSize:16, color:"#EF9F27", flexShrink:0}}/>
-              <span style={{fontSize:13, fontWeight:700, color:"#b07a00"}}>
-                {suggestions.length === 1
-                  ? (lang==="en"?"1 ingredient is running low":"1 ingrediente en stock crítico")
-                  : (lang==="en"?`${suggestions.length} ingredients are running low`:`${suggestions.length} ingredientes en stock crítico`)}
-              </span>
-            </div>
-            <button style={{...g.btnP, fontSize:11, padding:"5px 12px", whiteSpace:"nowrap"}} onClick={addAllSuggestions}>
-              <i className="ti ti-playlist-add" style={{fontSize:12}}/>{lang==="en"?"Add all":"Agregar todos"}
-            </button>
-          </div>
-          <div style={{display:"flex", flexDirection:"column", gap:4}}>
-            {suggestions.map(ing => {
-              const stock = parseFloat(ing.stock)||0;
-              const alert = parseFloat(ing.stock_alert)||0;
-              return (
-                <div key={ing.id} style={{display:"flex", alignItems:"center", gap:10, background:"rgba(239,159,39,0.06)", borderRadius:8, padding:"6px 10px"}}>
-                  <div style={{flex:1, fontSize:12}}>
-                    <span style={{fontWeight:600}}>{ing.name}</span>
-                    <span style={{color:TEXT2, marginLeft:6}}>{stock.toFixed(1)} / {alert.toFixed(1)} {ing.unit_inventory||ing.unit_use}</span>
-                  </div>
-                  <button style={{...g.btnS, fontSize:11, padding:"3px 10px"}} onClick={()=>addItem({
-                    name: ing.name,
-                    quantity: "",
-                    unit: ing.unit_purchase||ing.unit_use||"",
-                    supplier: ing.supplier||(lang==="en"?"Other":"Otro"),
-                  })}>
-                    <i className="ti ti-plus" style={{fontSize:11}}/>{lang==="en"?"Add":"Agregar"}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Header controls */}
       <div style={{display:"flex", gap:8, flexWrap:"wrap", alignItems:"center"}}>
@@ -3784,18 +3628,12 @@ function ShoppingList() {
         <div style={{...g.card, padding:40, textAlign:"center"}}>
           <i className="ti ti-shopping-cart" style={{fontSize:44, color:TEXT2, display:"block", marginBottom:12}}/>
           <div style={{fontSize:14, fontWeight:600, marginBottom:6}}>
-            {suggestions.length > 0
-              ? (lang==="en"?"Your list is empty — but you have low stock!":"Lista vacía — ¡pero tienes stock crítico!")
-              : (lang==="en"?"Your shopping list is empty":"Tu lista de compras está vacía")}
+            {lang==="en"?"Your shopping list is empty":"Tu lista de compras está vacía"}
           </div>
           <div style={{fontSize:11, color:TEXT2, marginBottom:16}}>
-            {suggestions.length > 0
-              ? (lang==="en"?"Use the suggestions above or add items manually":"Usa las sugerencias de arriba o agrega ítems manualmente")
-              : (lang==="en"?"Add items using the button above":"Agrega ítems usando el botón de arriba")}
+            {lang==="en"?"Add items using the button above":"Agrega ítems usando el botón de arriba"}
           </div>
-          {suggestions.length === 0 && (
-            <button style={g.btnP} onClick={()=>setShowForm(true)}><i className="ti ti-plus"/>{lang==="en"?"Add first item":"Agregar primer ítem"}</button>
-          )}
+          <button style={g.btnP} onClick={()=>setShowForm(true)}><i className="ti ti-plus"/>{lang==="en"?"Add first item":"Agregar primer ítem"}</button>
         </div>
       )}
 
@@ -4130,8 +3968,8 @@ function Settings() {
             tagline: lang==="en"?"For small kitchens getting serious about food cost":"Para cocinas pequeñas que quieren controlar su costo",
             color:"#378ADD", border:"rgba(55,138,221,0.3)", bg:"rgba(55,138,221,0.04)",
             features: lang==="en"
-              ? ["Up to 3 team members","Unlimited ingredients & recipes","Cost calculator with waste %","PDF recipe cards","Excel export (ingredients & recipes)","Dashboard with stock & cost alerts","Price trend sparklines","Suggested pricing engine","Food cost target tracking"]
-              : ["Hasta 3 miembros del equipo","Ingredientes y recetas ilimitados","Calculadora de costos con % merma","Fichas técnicas en PDF","Exportar a Excel (ingredientes y recetas)","Dashboard con alertas de stock y costo","Gráficas de tendencia de precios","Motor de precio sugerido","Seguimiento de objetivo de costo"],
+              ? ["Up to 3 team members","Unlimited ingredients & recipes","Cost calculator with waste %","PDF recipe cards","Excel export (ingredients & recipes)","Dashboard with cost alerts","Price trend sparklines","Suggested pricing engine","Food cost target tracking"]
+              : ["Hasta 3 miembros del equipo","Ingredientes y recetas ilimitados","Calculadora de costos con % merma","Fichas técnicas en PDF","Exportar a Excel (ingredientes y recetas)","Dashboard con alertas de costo","Gráficas de tendencia de precios","Motor de precio sugerido","Seguimiento de objetivo de costo"],
           },
           {
             id:"pro", name:"Pro", price:"$49", period:lang==="en"?"/month":"/mes",
