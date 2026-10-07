@@ -3036,7 +3036,6 @@ function Shopping() {
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
         <select style={g.sel} value={fCat} onChange={e=>setFC(e.target.value)}><option value="all">{t("all",lang)}</option>{CAT_ING.map(c=><option key={c.id} value={c.id}>{lang==="en"?c.label_en:c.label}</option>)}</select>
         <button style={g.btnP} onClick={()=>setShowAdd(v=>!v)}><i className={`ti ${showAdd?"ti-x":"ti-plus"}`}/>{showAdd?t("cancel",lang):t("addItem",lang)}</button>
-        <button style={g.btnS} onClick={()=>setItems(auto)}><i className="ti ti-refresh"/>{t("regenerate",lang)}</button>
         {items.some(i=>i.checked)&&<button style={g.btnD} onClick={()=>setItems(p=>p.filter(i=>!i.checked))}><i className="ti ti-trash"/>{t("clearBought",lang)}</button>}
       </div>
       {showAdd&&<div style={{...g.card,padding:14}}>
