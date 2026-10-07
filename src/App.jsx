@@ -1707,13 +1707,15 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$") {
   const sugTarget = recipe.target_margin ? (recipe.target_margin / 100) : 0.70;
   const sugP = cpp > 0 ? cpp / (1 - sugTarget) : null;
   const grossMargin = hasSell ? ((sellP - cpp) / sellP) * 100 : null;
-  const ing = recipe.ingredients.map(ri => {
+  const ingQtyHeader = lang==="en" ? "Qty / Unit" : "Cant. / Unidad";
+  const ingNameHeader = lang==="en" ? "Ingredient" : "Ingrediente";
+  const ingRows = recipe.ingredients.map(ri => {
     const i = ingredients.find(x => x.id === ri.ing_id);
-    return `<div class="ing-row"><span class="ing-qty">${ri.qty} ${ri.unit}</span><span class="ing-name">${i ? i.name : "Ingrediente"}</span></div>`;
-  });
-  const half = Math.ceil(ing.length / 2);
-  const col1 = ing.slice(0, half).join("");
-  const col2 = ing.slice(half).join("");
+    return `<tr><td class="ing-qty-cell">${ri.qty} ${ri.unit}</td><td class="ing-name-cell">${i ? i.name : (lang==="en"?"Ingredient":"Ingrediente")}</td></tr>`;
+  }).join("");
+  const ingTableHtml = recipe.ingredients.length > 0
+    ? `<table class="ing-table"><thead><tr><th>${ingQtyHeader}</th><th>${ingNameHeader}</th></tr></thead><tbody>${ingRows}</tbody></table>`
+    : `<p class='empty-note'>${T.noIng}</p>`;
 
   const stageMeta = lang==="en" ? {
     prep:    { label: "Preparation", icon: "🔪" },
@@ -1744,10 +1746,15 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$") {
     {id:"mariscos",label:"Mariscos"},{id:"pescado",label:"Pescado"},{id:"sesamo",label:"Sésamo"}
   ];
   const recipeAllergens = recipe.allergens || [];
+  const ALLERGEN_ICONS = { gluten:"🌾", lacteos:"🥛", huevo:"🥚", frutos_secos:"🌰", cacahuate:"🥜", soya:"🫘", mariscos:"🦐", pescado:"🐟", sesamo:"🌿" };
   const allergenCellsHtml = ALLERGEN_LIST.map(a => {
     const has = recipeAllergens.includes(a.id);
-    return `<div class="allergen-cell ${has?'has':''}"><div class="allergen-name">${a.label}</div><div class="allergen-value">${has?T.yes:T.no}</div></div>`;
+    return `<div class="allergen-cell ${has?'has':''}"><span class="allergen-icon">${ALLERGEN_ICONS[a.id]||"●"}</span><div class="allergen-name">${a.label}</div><div class="allergen-value">${has?T.yes:T.no}</div></div>`;
   }).join("");
+
+  const fcClass = fcPct !== null ? (fcPct > 35 ? "cost-err" : "cost-ok") : "";
+  const gmClass = grossMargin !== null ? (grossMargin >= 65 ? "cost-ok" : grossMargin >= 45 ? "cost-warn" : "cost-err") : "";
+  const dateStr = new Date().toLocaleDateString(lang==="en"?"en-US":"es-MX", {year:"numeric",month:"long",day:"numeric"});
 
   const bodyHtml = `
     <div class="cc-header">
@@ -1756,60 +1763,69 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$") {
         <div class="cc-brand">${T.subtitle}</div>
         <div class="cc-title">${recName}</div>
       </div>
+      <div class="cc-header-meta">
+        <span class="cc-header-tag">${lang==="en"?"Recipe Card":"Ficha Técnica"}</span>
+        <span class="cc-header-tag">${recipe.portions} ${T.portions}</span>
+      </div>
     </div>
 
     <div class="info-strip">
-      <div class="info-cell"><div class="info-label">${T.portions}</div><div class="info-value">${recipe.portions}</div></div>
       <div class="info-cell"><div class="info-label">${T.portionSize}</div><div class="info-value">${recipe.portion_size?`${recipe.portion_size} ${recipe.portion_unit}`:"—"}</div></div>
       <div class="info-cell"><div class="info-label">${T.prep}</div><div class="info-value">${recipe.prep_time || "—"}</div></div>
       <div class="info-cell"><div class="info-label">${T.cook}</div><div class="info-value">${recipe.cook_time || "—"}</div></div>
       <div class="info-cell"><div class="info-label">${T.shelf}</div><div class="info-value">${recipe.shelf_life || "—"}</div></div>
+      <div class="info-cell"><div class="info-label">${T.costPer}</div><div class="info-value" style="color:#C8312B">${cpp > 0 ? `${currency}${cpp.toFixed(2)}` : "—"}</div></div>
     </div>
 
-    <div class="section-title"><span class="dot"></span>${T.allergens}</div>
+    <div class="section-title">${T.allergens}</div>
     <div class="allergen-grid">${allergenCellsHtml}</div>
 
-    <div class="two-col-section">
-      <div class="col-block">
-        <div class="section-title"><span class="dot"></span>${T.ingredientsT}</div>
-        <div class="ing-columns">
-          <div class="ing-col">${col1 || `<div class='ing-row'><span class='ing-name'>${T.noIng}</span></div>`}</div>
-          <div class="ing-col">${col2}</div>
-        </div>
-      </div>
-    </div>
+    <div class="section-title">${T.ingredientsT}</div>
+    ${ingTableHtml}
 
-    <div class="section-title"><span class="dot"></span>${T.prepT}</div>
+    <div class="section-title">${T.prepT}</div>
     <div class="prep-section">
       ${stepsHtml || `<p class='empty-note'>${T.noSteps}</p>`}
     </div>
 
-    <div class="section-title"><span class="dot"></span>${T.costTitle}</div>
+    <div class="section-title">${T.costTitle}</div>
     <div class="cost-grid">
-      <div class="cost-cell">
+      <div class="cost-cell primary">
         <div class="cost-label">${T.costPer}</div>
-        <div class="cost-value accent">${cpp > 0 ? `${currency}${cpp.toFixed(2)}` : "—"}</div>
+        <div class="cost-value">${cpp > 0 ? `${currency}${cpp.toFixed(2)}` : "—"}</div>
+        <div class="cost-sub">${lang==="en"?"per portion":"por porción"}</div>
+      </div>
+      <div class="cost-cell accent-bg">
+        <div class="cost-label">${T.sugPrice} <span class="cost-badge">${recipe.target_margin ? `${recipe.target_margin}% FC` : "30% FC"}</span></div>
+        <div class="cost-value">${sugP ? `${currency}${sugP.toFixed(2)}` : "—"}</div>
+        <div class="cost-sub">${lang==="en"?"recommended price":"precio recomendado"}</div>
       </div>
       <div class="cost-cell">
         <div class="cost-label">${T.sellPrice}</div>
-        <div class="cost-value">${hasSell ? `${currency}${sellP.toFixed(2)}` : `<span class='cost-warn'>${T.noPrice}</span>`}</div>
+        <div class="cost-value">${hasSell ? `${currency}${sellP.toFixed(2)}` : `<span class='cost-warn-text'>${T.noPrice}</span>`}</div>
+        <div class="cost-sub">${lang==="en"?"set price":"precio asignado"}</div>
       </div>
       <div class="cost-cell">
         <div class="cost-label">${T.foodCost}</div>
-        <div class="cost-value ${fcPct !== null ? (fcPct > 35 ? "cost-err" : "cost-ok") : ""}">${fcPct !== null ? `${fcPct.toFixed(1)}%` : "—"}</div>
-      </div>
-      <div class="cost-cell">
-        <div class="cost-label">${T.sugPrice} <span class="cost-badge">${recipe.target_margin ? `${recipe.target_margin}%` : "30% FC"}</span></div>
-        <div class="cost-value accent">${sugP ? `${currency}${sugP.toFixed(2)}` : "—"}</div>
+        <div class="cost-value ${fcClass}">${fcPct !== null ? `${fcPct.toFixed(1)}%` : "—"}</div>
+        <div class="cost-sub">${lang==="en"?"food cost %":"% food cost"}</div>
       </div>
       <div class="cost-cell">
         <div class="cost-label">${T.margin}</div>
-        <div class="cost-value ${grossMargin !== null ? (grossMargin >= 65 ? "cost-ok" : grossMargin >= 45 ? "cost-warn" : "cost-err") : ""}">${grossMargin !== null ? `${grossMargin.toFixed(1)}%` : "—"}</div>
+        <div class="cost-value ${gmClass}">${grossMargin !== null ? `${grossMargin.toFixed(1)}%` : "—"}</div>
+        <div class="cost-sub">${lang==="en"?"gross margin":"margen bruto"}</div>
       </div>
       <div class="cost-cell">
         <div class="cost-label">${T.targetMargin}</div>
         <div class="cost-value">${recipe.target_margin ? `${recipe.target_margin}%` : "70%"}</div>
+        <div class="cost-sub">${lang==="en"?"target":"objetivo"}</div>
       </div>
+    </div>
+
+    <div class="cc-footer">
+      <div class="cc-footer-brand">CHEFCOST</div>
+      <div class="cc-footer-date">${dateStr}</div>
+      <div class="cc-footer-tag">${lang==="en"?"Food Cost Manager":"Gestión de Costos"}</div>
     </div>
   `;
 
@@ -1821,54 +1837,205 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$") {
   styleTag = document.createElement("style");
   styleTag.id = "__recipe_print_style";
   styleTag.innerHTML = `
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    * { box-sizing: border-box; margin:0; padding:0; }
     #__recipe_print_container {
-      font-family: 'Segoe UI Variable','Segoe UI',system-ui,sans-serif;
-      color: #1a1a1a;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: #1c1c1e;
       background: #fff;
     }
-    #__recipe_print_container .cc-header { display:flex; align-items:center; gap:16px; padding-bottom:18px; margin-bottom:18px; border-bottom:3px solid #1a1a1a; }
-    #__recipe_print_container .cc-logo-mark { width:54px; height:54px; border-radius:12px; background:#1a1a1a; color:#C8312B; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; flex-shrink:0; letter-spacing:0.5px; }
-    #__recipe_print_container .cc-brand { font-size:10px; color:#C8312B; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:3px; }
-    #__recipe_print_container .cc-title { font-size:22px; font-weight:800; color:#111; }
-    #__recipe_print_container .info-strip { display:flex; border-radius:10px; overflow:hidden; border:1px solid #ddd; margin-bottom:22px; }
-    #__recipe_print_container .info-cell { flex:1; padding:10px 14px; border-right:1px solid #e5e5e5; background:#fafafa; }
-    #__recipe_print_container .info-cell:nth-child(odd) { background:#fafafa; }
-    #__recipe_print_container .info-cell:last-child { border-right:none; }
-    #__recipe_print_container .info-label { font-size:9px; color:#888; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:4px; }
-    #__recipe_print_container .info-value { font-size:14px; font-weight:700; color:#1a1a1a; }
-    #__recipe_print_container .section-title { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; color:#1a1a1a; margin:22px 0 10px 0; }
-    #__recipe_print_container .section-title .dot { width:8px; height:8px; border-radius:50%; background:#C8312B; flex-shrink:0; }
-    #__recipe_print_container .allergen-grid { display:grid; grid-template-columns:repeat(9,1fr); gap:6px; }
-    #__recipe_print_container .allergen-cell { border:1px solid #e0e0e0; border-radius:8px; padding:7px 4px; text-align:center; background:#fafafa; }
-    #__recipe_print_container .allergen-cell.has { border-color:#e0a8a4; background:#fdf0ef; }
-    #__recipe_print_container .allergen-name { font-size:8.5px; font-weight:700; color:#555; margin-bottom:3px; }
-    #__recipe_print_container .allergen-cell.has .allergen-name { color:#a32d2d; }
-    #__recipe_print_container .allergen-value { font-size:10px; font-weight:700; color:#999; }
-    #__recipe_print_container .allergen-cell.has .allergen-value { color:#a32d2d; }
-    #__recipe_print_container .ing-columns { display:flex; gap:30px; }
-    #__recipe_print_container .ing-col { flex:1; }
-    #__recipe_print_container .ing-row { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid #eee; font-size:12px; }
-    #__recipe_print_container .ing-qty { color:#C8312B; font-weight:700; min-width:68px; flex-shrink:0; }
-    #__recipe_print_container .ing-name { color:#222; }
-    #__recipe_print_container .prep-section { font-size:12.5px; line-height:1.7; }
-    #__recipe_print_container .stage-block { margin-bottom:14px; padding-left:14px; border-left:3px solid #C8312B; }
-    #__recipe_print_container .stage-title { font-weight:800; font-size:12.5px; margin-bottom:5px; color:#1a1a1a; }
-    #__recipe_print_container .stage-block ol { margin:0; padding-left:18px; }
-    #__recipe_print_container .stage-block li { margin-bottom:4px; color:#333; }
-    #__recipe_print_container .step-time { color:#C8312B; font-weight:700; font-size:11px; }
-    #__recipe_print_container .empty-note { color:#999; font-size:12px; font-style:italic; }
-    #__recipe_print_container .cost-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
-    #__recipe_print_container .cost-cell { border:1px solid #e5e5e5; border-radius:10px; padding:10px 14px; background:#fafafa; }
-    #__recipe_print_container .cost-label { font-size:9px; color:#888; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:5px; display:flex; align-items:center; gap:5px; }
-    #__recipe_print_container .cost-value { font-size:16px; font-weight:800; color:#1a1a1a; }
-    #__recipe_print_container .cost-value.accent { color:#C8312B; }
-    #__recipe_print_container .cost-value.cost-ok { color:#2a7d4f; }
-    #__recipe_print_container .cost-value.cost-warn { color:#b07a00; }
-    #__recipe_print_container .cost-value.cost-err { color:#c0392b; }
-    #__recipe_print_container .cost-warn { color:#b07a00; font-size:11px; font-weight:600; }
-    #__recipe_print_container .cost-badge { display:inline-block; background:#f0f0f0; border-radius:4px; padding:1px 5px; font-size:8px; font-weight:700; color:#555; letter-spacing:0.3px; }
-    #__recipe_print_container .footer-note { margin-top:34px; font-size:9px; color:#aaa; border-top:1px solid #eee; padding-top:10px; display:flex; justify-content:space-between; letter-spacing:0.3px; }
+
+    /* ── HEADER ── */
+    #__recipe_print_container .cc-header {
+      background: #1c1c1e;
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    #__recipe_print_container .cc-logo-mark {
+      width: 56px; height: 56px;
+      border-radius: 14px;
+      background: #C8312B;
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 900; flex-shrink: 0; letter-spacing: 0.5px;
+    }
+    #__recipe_print_container .cc-header-text { flex: 1; }
+    #__recipe_print_container .cc-brand {
+      font-size: 10px; color: rgba(255,255,255,0.45);
+      font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px;
+    }
+    #__recipe_print_container .cc-title {
+      font-size: 26px; font-weight: 900; color: #fff; line-height: 1.1;
+    }
+    #__recipe_print_container .cc-header-meta {
+      display: flex; flex-direction: column; gap: 4px; align-items: flex-end;
+    }
+    #__recipe_print_container .cc-header-tag {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px; padding: 4px 10px;
+      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.55);
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+
+    /* ── META STRIP ── */
+    #__recipe_print_container .info-strip {
+      display: grid; grid-template-columns: repeat(5,1fr);
+      gap: 8px; margin-bottom: 24px;
+    }
+    #__recipe_print_container .info-cell {
+      background: #f5f5f7; border-radius: 12px; padding: 12px 14px;
+    }
+    #__recipe_print_container .info-label {
+      font-size: 9px; color: #8e8e93; font-weight: 600;
+      letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 5px;
+    }
+    #__recipe_print_container .info-value {
+      font-size: 15px; font-weight: 700; color: #1c1c1e;
+    }
+
+    /* ── SECTION HEADING ── */
+    #__recipe_print_container .section-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: #8e8e93;
+      margin: 24px 0 10px 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    #__recipe_print_container .section-title::after {
+      content: ''; flex: 1; height: 1px; background: #e5e5ea;
+    }
+
+    /* ── ALLERGENS ── */
+    #__recipe_print_container .allergen-grid {
+      display: grid; grid-template-columns: repeat(9,1fr); gap: 6px;
+    }
+    #__recipe_print_container .allergen-cell {
+      border-radius: 10px; padding: 8px 4px; text-align: center;
+      background: #f5f5f7; border: 1.5px solid transparent;
+    }
+    #__recipe_print_container .allergen-cell.has {
+      background: #fff1f0; border-color: #C8312B;
+    }
+    #__recipe_print_container .allergen-icon {
+      font-size: 14px; margin-bottom: 3px; display: block; line-height: 1;
+    }
+    #__recipe_print_container .allergen-name {
+      font-size: 8px; font-weight: 600; color: #8e8e93; margin-bottom: 2px;
+    }
+    #__recipe_print_container .allergen-cell.has .allergen-name { color: #C8312B; }
+    #__recipe_print_container .allergen-value {
+      font-size: 9px; font-weight: 700; color: #c7c7cc;
+    }
+    #__recipe_print_container .allergen-cell.has .allergen-value { color: #C8312B; }
+
+    /* ── INGREDIENTS TABLE ── */
+    #__recipe_print_container .ing-table {
+      width: 100%; border-collapse: collapse;
+    }
+    #__recipe_print_container .ing-table thead tr {
+      background: #1c1c1e;
+    }
+    #__recipe_print_container .ing-table thead th {
+      font-size: 9px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+      color: rgba(255,255,255,0.5); padding: 8px 12px; text-align: left;
+    }
+    #__recipe_print_container .ing-table thead th:first-child { border-radius: 8px 0 0 8px; }
+    #__recipe_print_container .ing-table thead th:last-child  { border-radius: 0 8px 8px 0; }
+    #__recipe_print_container .ing-table tbody tr:nth-child(odd)  { background: #f5f5f7; }
+    #__recipe_print_container .ing-table tbody tr:nth-child(even) { background: #fff; }
+    #__recipe_print_container .ing-table tbody td {
+      font-size: 12.5px; padding: 9px 12px; color: #1c1c1e;
+    }
+    #__recipe_print_container .ing-table tbody td:first-child {
+      border-radius: 6px 0 0 6px;
+    }
+    #__recipe_print_container .ing-table tbody td:last-child {
+      border-radius: 0 6px 6px 0;
+    }
+    #__recipe_print_container .ing-qty-cell {
+      font-weight: 700; color: #C8312B; white-space: nowrap; width: 90px;
+    }
+    #__recipe_print_container .ing-name-cell { font-weight: 500; }
+
+    /* ── STEPS ── */
+    #__recipe_print_container .prep-section { display: flex; flex-direction: column; gap: 14px; }
+    #__recipe_print_container .stage-block {
+      border-radius: 12px; overflow: hidden; border: 1px solid #e5e5ea;
+    }
+    #__recipe_print_container .stage-title {
+      background: #f5f5f7; padding: 9px 14px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+      color: #1c1c1e; display: flex; align-items: center; gap: 6px;
+    }
+    #__recipe_print_container .stage-block ol {
+      margin: 0; padding: 12px 14px 12px 34px; display: flex; flex-direction: column; gap: 6px;
+    }
+    #__recipe_print_container .stage-block li {
+      font-size: 12.5px; color: #3a3a3c; line-height: 1.5;
+    }
+    #__recipe_print_container .step-time {
+      display: inline-block; background: #fff3cd; color: #856404;
+      border-radius: 4px; padding: 1px 6px; font-size: 10px; font-weight: 700;
+      margin-left: 6px;
+    }
+    #__recipe_print_container .empty-note {
+      color: #c7c7cc; font-size: 12px; font-style: italic; padding: 8px 0;
+    }
+
+    /* ── COST CARDS ── */
+    #__recipe_print_container .cost-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 12px;
+    }
+    #__recipe_print_container .cost-cell {
+      border-radius: 12px; padding: 14px 16px;
+      background: #f5f5f7; position: relative; overflow: hidden;
+    }
+    #__recipe_print_container .cost-cell.primary {
+      background: #1c1c1e;
+    }
+    #__recipe_print_container .cost-cell.accent-bg {
+      background: #fff1f0; border: 1.5px solid #f5c4c2;
+    }
+    #__recipe_print_container .cost-label {
+      font-size: 9px; color: #8e8e93; font-weight: 600;
+      letter-spacing: 0.6px; text-transform: uppercase;
+      margin-bottom: 8px; display: flex; align-items: center; gap: 5px;
+    }
+    #__recipe_print_container .cost-cell.primary .cost-label { color: rgba(255,255,255,0.4); }
+    #__recipe_print_container .cost-value { font-size: 22px; font-weight: 800; color: #1c1c1e; }
+    #__recipe_print_container .cost-cell.primary .cost-value { color: #C8312B; }
+    #__recipe_print_container .cost-cell.accent-bg .cost-value { color: #C8312B; }
+    #__recipe_print_container .cost-value.cost-ok  { color: #2a7d4f; }
+    #__recipe_print_container .cost-value.cost-warn { color: #b07a00; }
+    #__recipe_print_container .cost-value.cost-err  { color: #C8312B; }
+    #__recipe_print_container .cost-sub { font-size: 10px; color: #8e8e93; margin-top: 4px; }
+    #__recipe_print_container .cost-warn-text { color: #b07a00; font-size: 11px; font-weight: 600; }
+    #__recipe_print_container .cost-badge {
+      display: inline-block; background: rgba(200,49,43,0.12); color: #C8312B;
+      border-radius: 4px; padding: 1px 5px; font-size: 8px; font-weight: 700; letter-spacing: 0.3px;
+    }
+
+    /* ── FOOTER ── */
+    #__recipe_print_container .cc-footer {
+      margin-top: 32px;
+      background: #1c1c1e;
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    #__recipe_print_container .cc-footer-brand {
+      font-size: 11px; font-weight: 800; color: #C8312B; letter-spacing: 0.5px;
+    }
+    #__recipe_print_container .cc-footer-date {
+      font-size: 10px; color: rgba(255,255,255,0.3); font-weight: 500;
+    }
+    #__recipe_print_container .cc-footer-tag {
+      font-size: 10px; color: rgba(255,255,255,0.25); font-weight: 500;
+    }
 
     @media print {
       body * { visibility: hidden !important; }
@@ -1881,8 +2048,8 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$") {
 
   const container = document.createElement("div");
   container.id = "__recipe_print_container";
-  container.innerHTML = bodyHtml + `<div class="footer-note"><span>${T.generated} · ${new Date().toLocaleDateString()}</span><span>Food Cost Manager</span></div>`;
-  container.style.cssText = "position:fixed;inset:0;background:#fff;z-index:99999;overflow:auto;padding:44px;max-width:780px;margin:0 auto;display:block;";
+  container.innerHTML = bodyHtml;
+  container.style.cssText = "position:fixed;inset:0;background:#f2f2f7;z-index:99999;overflow:auto;padding:44px;max-width:820px;margin:0 auto;display:block;";
 
   const closeBtn = document.createElement("button");
   closeBtn.textContent = lang==="en"?"✕ Close preview":"✕ Cerrar vista previa";
