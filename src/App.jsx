@@ -444,7 +444,7 @@ function Register({ onBack }) {
 
       // 4. Create default app_settings row for this restaurant
       await supabase.from("app_settings").insert({
-        restaurant_id: rest.id, lang:"en", main_supplier:"", order_days:[], shopping_submitted:false,
+        restaurant_id: rest.id, lang:"en", main_supplier:"", shopping_submitted:false,
         currency: selectedCountry.currency, unit_system: selectedCountry.unitSystem,
       });
 
@@ -2959,7 +2959,7 @@ function Inventory() {
 
 // ─── SHOPPING ────────────────────────────────────────────────────────────────
 function Shopping() {
-  const { ingredients, lang, currency, unitSystem, mainSupplier, orderDays } = useApp();
+  const { ingredients, lang, currency, unitSystem, mainSupplier } = useApp();
   const _shopDu = defaultUnits(unitSystem);
   const [items,setItems]=useState([]);
   const [showAdd,setShowAdd]=useState(false);
@@ -2979,44 +2979,9 @@ function Shopping() {
   const providerItems=items.filter(i=>i.group==="provider");
   const storeRunItems=items.filter(i=>i.group==="storerun");
 
-  // Order reminder logic
-  const DAY_NAMES_ES=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-  const DAY_NAMES_EN=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
-  const todayIdx=new Date().getDay();
-  const todayEs=DAY_NAMES_ES[todayIdx];
-  const todayOrder=orderDays.find(d=>d.order===todayEs);
-  const nextOrder=(()=>{
-    if(orderDays.length===0) return null;
-    for(let i=0;i<7;i++){
-      const idx=(todayIdx+i)%7;
-      const dayEs=DAY_NAMES_ES[idx];
-      const match=orderDays.find(d=>d.order===dayEs);
-      if(match) return {...match, daysAway:i};
-    }
-    return null;
-  })();
-  const dayLabel=(dayEs,l)=>{const idx=DAY_NAMES_ES.indexOf(dayEs);return l==="en"?DAY_NAMES_EN[idx]:dayEs;};
 
   return (
     <div style={{padding:20,display:"flex",flexDirection:"column",gap:16}}>
-      {todayOrder&&providerItems.length>0&&(
-        <div style={{background:"rgba(200,49,43,0.06)",border:`1px solid ${ACCENT}`,borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
-          <i className="ti ti-bell-ringing" style={{fontSize:18,color:ACCENT}}/>
-          <div style={{flex:1}}>
-            <div style={{fontSize:13,fontWeight:700,color:ACCENT}}>{lang==="en"?`Today is order day for ${mainSupplier}!`:`¡Hoy es día de pedido para ${mainSupplier}!`}</div>
-            <div style={{fontSize:11,color:TEXT2}}>{lang==="en"?`Delivery expected: ${dayLabel(todayOrder.deliver,lang)}. You have ${providerItems.length} item(s) pending.`:`Entrega esperada: ${dayLabel(todayOrder.deliver,lang)}. Tienes ${providerItems.length} ítem(s) pendiente(s).`}</div>
-          </div>
-        </div>
-      )}
-      {!todayOrder&&nextOrder&&providerItems.length>0&&(
-        <div style={{background:SURF2,border:`1px solid ${BDR}`,borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
-          <i className="ti ti-calendar-time" style={{fontSize:18,color:"#378ADD"}}/>
-          <div style={{flex:1}}>
-            <div style={{fontSize:13,fontWeight:600}}>{lang==="en"?`Next ${mainSupplier} order day: ${dayLabel(nextOrder.order,lang)}`:`Próximo día de pedido a ${mainSupplier}: ${dayLabel(nextOrder.order,lang)}`}</div>
-            <div style={{fontSize:11,color:TEXT2}}>{lang==="en"?`${nextOrder.daysAway===0?"Today":nextOrder.daysAway+" day(s) away"} · Delivery: ${dayLabel(nextOrder.deliver,lang)}`:`${nextOrder.daysAway===0?"Hoy":"En "+nextOrder.daysAway+" día(s)"} · Entrega: ${dayLabel(nextOrder.deliver,lang)}`}</div>
-          </div>
-        </div>
-      )}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10}}>
         {[{label:t("totalItems",lang),value:items.length,color:TEXT},{label:t("pending",lang),value:items.filter(i=>!i.checked).length,color:"#EF9F27"},{label:t("alreadyBought",lang),value:fmt(totalChk,currency),color:ACCENT},{label:t("totalEst",lang),value:fmt(totalEst,currency),color:"#378ADD"}].map((s,i)=>(
           <div key={i} style={{background:SURF,border:`1px solid ${BDR}`,borderRadius:10,padding:"12px 14px"}}>
@@ -3724,7 +3689,7 @@ function ShoppingList() {
 }
 
 function Settings() {
-  const { currentUser, setUser, users, setUsers, lang, setLang, currency, setCurrency, unitSystem, setUnitSystem, mainSupplier, setMainSupplier, orderDays, setOrderDays, ingredients, restaurantName, plan, setPlan, inventoryDate, setInventoryDate } = useApp();
+  const { currentUser, setUser, users, setUsers, lang, setLang, currency, setCurrency, unitSystem, setUnitSystem, mainSupplier, setMainSupplier, ingredients, restaurantName, plan, setPlan, inventoryDate, setInventoryDate } = useApp();
   const [tab,setTab]=useState("account");
   const [editU,setEd]=useState(null);
   const [addNew,setAN]=useState(false);
@@ -3751,16 +3716,12 @@ function Settings() {
   }
   const tabs=[
     {id:"account",   label:t("myAccount",lang), icon:"ti-user"},
-    {id:"orders",    label:lang==="en"?"Order schedule":"Días de pedido", icon:"ti-calendar-event"},
     {id:"inventory", label:lang==="en"?"Inventory":"Inventario", icon:"ti-box"},
     {id:"language",  label:lang==="es"?"Idioma":"Language",      icon:"ti-language"},
     ...(currentUser.role==="admin"?[{id:"users",label:t("users",lang),icon:"ti-users"}]:[]),
     ...(currentUser.role==="admin"?[{id:"billing",label:lang==="en"?"Billing":"Suscripción",icon:"ti-credit-card"}]:[]),
   ];
   const atUserLimit = (plan==="trial"||plan==="starter") && users.length >= 3;
-  const DAYS_ES=["lunes","martes","miércoles","jueves","viernes","sábado","domingo"];
-  const DAYS_EN=["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
-  const dayOptLabel=(d)=>{const i=DAYS_ES.indexOf(d);return lang==="en"?DAYS_EN[i]:d;};
   const suppliers=[...new Set(ingredients.map(i=>i.supplier).filter(Boolean))];
   async function updateMainSupplier(val){
     setMainSupplier(val);
@@ -3768,15 +3729,6 @@ function Settings() {
     const { error } = await supabase.from("app_settings").update({ main_supplier: val }).eq("restaurant_id", rid);
     if (error) console.error("Error guardando proveedor principal:", error.message);
   }
-  async function saveOrderDays(newDays){
-    setOrderDays(newDays);
-    const rid = currentUser?.restaurant_id;
-    const { error } = await supabase.from("app_settings").update({ order_days: newDays }).eq("restaurant_id", rid);
-    if (error) console.error("Error guardando días de pedido:", error.message);
-  }
-  function addOrderDay(){saveOrderDays([...orderDays,{order:"lunes",deliver:"martes"}]);}
-  function updOrderDay(idx,k,v){saveOrderDays(orderDays.map((d,i)=>i===idx?{...d,[k]:v}:d));}
-  function rmOrderDay(idx){saveOrderDays(orderDays.filter((_,i)=>i!==idx));}
   async function saveInventoryDate(val){
     setInventoryDate(val);
     const rid = currentUser?.restaurant_id;
@@ -3820,40 +3772,6 @@ function Settings() {
         <button style={{...g.btnD,width:"fit-content"}} onClick={()=>setUser(null)}><i className="ti ti-logout"/>{t("signOut",lang)}</button>
       </div>}
 
-      {tab==="orders"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div style={{...g.card,padding:20,display:"flex",flexDirection:"column",gap:12}}>
-          <div style={{fontSize:13,fontWeight:600}}>{lang==="en"?"Main supplier":"Proveedor principal"}</div>
-          <div style={{fontSize:11,color:TEXT2,marginTop:-6}}>{lang==="en"?"Ingredients from this supplier go to 'Provider Order' in your shopping list. Everything else goes to 'Store Run'.":"Los ingredientes de este proveedor van a 'Pedido Proveedor' en tu lista de compras. Todo lo demás va a 'Store Run'."}</div>
-          <select style={{...g.sel,width:"100%"}} value={mainSupplier} onChange={e=>updateMainSupplier(e.target.value)}>
-            {suppliers.length===0&&<option value={mainSupplier}>{mainSupplier}</option>}
-            {suppliers.map(s=><option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div style={{...g.card,padding:20,display:"flex",flexDirection:"column",gap:12}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div>
-              <div style={{fontSize:13,fontWeight:600}}>{lang==="en"?"Order & delivery days":"Días de pedido y entrega"}</div>
-              <div style={{fontSize:11,color:TEXT2}}>{lang==="en"?`When do you place orders with ${mainSupplier}?`:`¿Cuándo le pones pedidos a ${mainSupplier}?`}</div>
-            </div>
-            <button style={g.btnP} onClick={addOrderDay}><i className="ti ti-plus"/>{t("add",lang)}</button>
-          </div>
-          {orderDays.length===0&&<div style={{fontSize:11,color:TEXT2,fontStyle:"italic"}}>{lang==="en"?"No order days configured yet.":"Sin días de pedido configurados."}</div>}
-          {orderDays.map((d,idx)=>(
-            <div key={idx} style={{display:"flex",gap:10,alignItems:"flex-end",background:SURF2,borderRadius:8,padding:"10px 12px"}}>
-              <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}>
-                <label style={g.lbl}>{lang==="en"?"I order on":"Pido el"}</label>
-                <select style={{...g.sel,width:"100%"}} value={d.order} onChange={e=>updOrderDay(idx,"order",e.target.value)}>{DAYS_ES.map(day=><option key={day} value={day}>{dayOptLabel(day)}</option>)}</select>
-              </div>
-              <i className="ti ti-arrow-right" style={{color:TEXT2,marginBottom:10}}/>
-              <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}>
-                <label style={g.lbl}>{lang==="en"?"Delivered on":"Despachan el"}</label>
-                <select style={{...g.sel,width:"100%"}} value={d.deliver} onChange={e=>updOrderDay(idx,"deliver",e.target.value)}>{DAYS_ES.map(day=><option key={day} value={day}>{dayOptLabel(day)}</option>)}</select>
-              </div>
-              <button style={g.btnD} onClick={()=>rmOrderDay(idx)}><i className="ti ti-trash"/></button>
-            </div>
-          ))}
-        </div>
-      </div>}
 
       {tab==="language"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
         <div style={{...g.card,padding:20,display:"flex",flexDirection:"column",gap:12}}>
@@ -4391,7 +4309,6 @@ export default function App() {
   const [currency,    setCurrency]    = useState("$");
   const [unitSystem,  setUnitSystem]  = useState("imperial");
   const [mainSupplier, setMainSupplier] = useState("Restaurant Depot");
-  const [orderDays,   setOrderDays]   = useState([]);
   const [pendingShopping, setPendingShopping] = useState(0);
   const [shoppingSubmitted, setShoppingSubmitted] = useState(false);
   const [shoppingSubmittedBy, setShoppingSubmittedBy] = useState("");
@@ -4437,7 +4354,6 @@ export default function App() {
         if (setRes.data) {
           setLang(setRes.data.lang || "en");
           setMainSupplier(setRes.data.main_supplier || "Restaurant Depot");
-          setOrderDays(setRes.data.order_days || []);
           if (setRes.data.currency) setCurrency(setRes.data.currency);
           if (setRes.data.unit_system) setUnitSystem(setRes.data.unit_system);
           if (setRes.data.inventory_date) setInventoryDate(setRes.data.inventory_date);
@@ -4474,7 +4390,7 @@ export default function App() {
   const canAccess = (id) => !currentUser ? false : currentUser.role==="admin" ? true : !!currentUser.permissions[id];
   const canEdit   = (id) => !currentUser ? false : currentUser.role==="admin" ? true : currentUser.permissions[id]==="edit";
 
-  const ctx = { currentUser, setUser, users, setUsers, ingredients, setIngredients, recipes, setRecipes, invoices, setInvoices, lang, setLang, currency, setCurrency, unitSystem, setUnitSystem, mainSupplier, setMainSupplier, orderDays, setOrderDays, pendingShopping, setPendingShopping, setPage, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, restaurantName, plan, setPlan, inventoryDate, setInventoryDate };
+  const ctx = { currentUser, setUser, users, setUsers, ingredients, setIngredients, recipes, setRecipes, invoices, setInvoices, lang, setLang, currency, setCurrency, unitSystem, setUnitSystem, mainSupplier, setMainSupplier, pendingShopping, setPendingShopping, setPage, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, restaurantName, plan, setPlan, inventoryDate, setInventoryDate };
 
   const PAGES = { dashboard:<Dashboard/>, ingredients:<Ingredients/>, recipes:<Recipes/>, invoices:<Invoices/>, inventory:<Inventory/>, wastelog:<WasteLog/>, shopping:<ShoppingList/>, settings:<Settings/> };
   const visibleNav = [...NAV.filter(n=>canAccess(n.id)), { id:"settings", icon:"ti-settings", es:"Configuración", en:"Settings" }];
