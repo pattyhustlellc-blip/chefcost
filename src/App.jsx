@@ -880,7 +880,7 @@ function Login() {
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
 function Dashboard() {
-  const { ingredients, recipes, lang, currency, pendingShopping, setPage, shoppingSubmitted, shoppingSubmittedBy } = useApp();
+  const { ingredients, recipes, lang, currency, pendingShopping, setPage, shoppingSubmitted, shoppingSubmittedBy, inventoryDate } = useApp();
   const isMobile = useIsMobile();
   const [showAlerts, setShowAlerts] = useState(false);
   const calcs    = recipes.map(r => ({ ...r, ...calcRecipe(r, ingredients, recipes) }));
@@ -967,6 +967,32 @@ function Dashboard() {
           <i className="ti ti-chevron-right" style={{ fontSize:14, color:"#EF9F27" }}/>
         </div>
       )}
+
+      {/* ── Inventory countdown banner ── */}
+      {inventoryDate && (()=>{
+        const today = new Date(); today.setHours(0,0,0,0);
+        const target = new Date(inventoryDate + "T00:00:00");
+        const diffMs = target - today;
+        const days = Math.round(diffMs / 86400000);
+        if (days < 0) return null; // past date, don't show
+        const isToday = days === 0;
+        const color = isToday ? "#C8312B" : days <= 3 ? "#EF9F27" : "#378ADD";
+        const bgColor = isToday ? "rgba(200,49,43,0.06)" : days <= 3 ? "rgba(239,159,39,0.06)" : "rgba(55,138,221,0.06)";
+        const borderColor = isToday ? "rgba(200,49,43,0.3)" : days <= 3 ? "rgba(239,159,39,0.3)" : "rgba(55,138,221,0.3)";
+        return (
+          <div style={{ background:bgColor, border:`1px solid ${borderColor}`, borderRadius:10, padding:"11px 16px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={()=>setPage("inventory")}>
+            <i className="ti ti-calendar-event" style={{ fontSize:18, color, flexShrink:0 }}/>
+            <div style={{ flex:1, fontSize:13, fontWeight:600, color }}>
+              {isToday
+                ? (lang==="en"?"📋 Today is inventory day!":"📋 ¡Hoy es día de inventario!")
+                : (lang==="en"
+                    ? `📋 ${days} day${days===1?"":"s"} until inventory`
+                    : `📋 Faltan ${days} día${days===1?"":"s"} para inventario`)}
+            </div>
+            <i className="ti ti-chevron-right" style={{ fontSize:14, color }}/>
+          </div>
+        );
+      })()}
 
       {/* ── KPI row ── */}
       {(() => {
@@ -2821,12 +2847,31 @@ function Inventory() {
   const valDiffPct=prevVal!==null&&prevVal>0?((valDiff/prevVal)*100):null;
   const filtered=fCat==="all"?ingredients:ingredients.filter(i=>i.category===fCat);
   const grouped=CAT_ING.map(c=>({...c,items:filtered.filter(i=>i.category===c.id)})).filter(c=>c.items.length>0);
+  function exportInventory(){
+    if(!dc) return;
+    const rows=ingredients.map(ing=>{
+      const c=dc[ing.id]||{sealed:"",loose:""};
+      const totalUnits=tot(ing,c);
+      const value=val(ing,c);
+      return {
+        [lang==="en"?"Ingredient":"Ingrediente"]: ing.name,
+        [lang==="en"?"Category":"Categoría"]: ing.category,
+        [lang==="en"?"Sealed packs":"Empaques cerrados"]: parseFloat(c.sealed)||0,
+        [lang==="en"?"Loose units":"Sueltas"]: parseFloat(c.loose)||0,
+        [lang==="en"?"Total units":"Total unidades"]: totalUnits,
+        [lang==="en"?"Unit use":"Unidad uso"]: ing.unit_use,
+        [`${currency}/${lang==="en"?"unit":"unidad"}`]: parseFloat(getCostPerBaseUnit(ing).toFixed(4)),
+        [lang==="en"?"Value":"Valor"]: parseFloat(value.toFixed(2)),
+      };
+    });
+    exportExcel(rows, lang==="en"?"Inventory":"Inventario", `ChefCost_Inventario_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
   return (
     <div style={{padding:20,display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
         {mode==="view"&&<><span style={{flex:1,fontSize:13,color:TEXT2}}>{saved?t("lastCountSaved",lang):t("noInventoryYet",lang)}</span><button style={g.btnP} onClick={start}><i className="ti ti-clipboard-list"/>{t("startCount",lang)}</button></>}
         {mode==="counting"&&<><span style={{flex:1,fontSize:13,color:ACCENT,fontWeight:600}}><i className="ti ti-clipboard-list" style={{marginRight:6}}/>{t("countInProgress",lang)}</span><button style={g.btnP} onClick={save}><i className="ti ti-device-floppy"/>{t("save",lang)}</button><button style={g.btnS} onClick={()=>{setCounts({});setMode("view");}}>{t("cancel",lang)}</button></>}
-        {mode==="saved"&&<><span style={{flex:1,fontSize:13,color:ACCENT,fontWeight:600}}>✓ {lang==="en"?"Saved":"Guardado"} — {t("totalValue",lang)}: <strong>{fmt(totalVal,currency)}</strong></span><button style={g.btnP} onClick={start}><i className="ti ti-refresh"/>{t("newCount",lang)}</button></>}
+        {mode==="saved"&&<><span style={{flex:1,fontSize:13,color:ACCENT,fontWeight:600}}>✓ {lang==="en"?"Saved":"Guardado"} — {t("totalValue",lang)}: <strong>{fmt(totalVal,currency)}</strong></span><button style={g.btnS} onClick={exportInventory}><i className="ti ti-file-spreadsheet"/>{lang==="en"?"Export Excel":"Exportar Excel"}</button><button style={g.btnP} onClick={start}><i className="ti ti-refresh"/>{t("newCount",lang)}</button></>}
       </div>
       {mode==="saved"&&prevVal!==null&&(
         <div style={{background:SURF,border:`1px solid ${BDR}`,borderRadius:12,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -3680,7 +3725,7 @@ function ShoppingList() {
 }
 
 function Settings() {
-  const { currentUser, setUser, users, setUsers, lang, setLang, currency, setCurrency, unitSystem, setUnitSystem, mainSupplier, setMainSupplier, orderDays, setOrderDays, ingredients, restaurantName, plan, setPlan } = useApp();
+  const { currentUser, setUser, users, setUsers, lang, setLang, currency, setCurrency, unitSystem, setUnitSystem, mainSupplier, setMainSupplier, orderDays, setOrderDays, ingredients, restaurantName, plan, setPlan, inventoryDate, setInventoryDate } = useApp();
   const [tab,setTab]=useState("account");
   const [editU,setEd]=useState(null);
   const [addNew,setAN]=useState(false);
@@ -3706,9 +3751,10 @@ function Settings() {
     setUsers(p=>p.filter(x=>x.id!==id));
   }
   const tabs=[
-    {id:"account",  label:t("myAccount",lang), icon:"ti-user"},
-    {id:"orders",   label:lang==="en"?"Order schedule":"Días de pedido", icon:"ti-calendar-event"},
-    {id:"language", label:lang==="es"?"Idioma":"Language",      icon:"ti-language"},
+    {id:"account",   label:t("myAccount",lang), icon:"ti-user"},
+    {id:"orders",    label:lang==="en"?"Order schedule":"Días de pedido", icon:"ti-calendar-event"},
+    {id:"inventory", label:lang==="en"?"Inventory":"Inventario", icon:"ti-box"},
+    {id:"language",  label:lang==="es"?"Idioma":"Language",      icon:"ti-language"},
     ...(currentUser.role==="admin"?[{id:"users",label:t("users",lang),icon:"ti-users"}]:[]),
     ...(currentUser.role==="admin"?[{id:"billing",label:lang==="en"?"Billing":"Suscripción",icon:"ti-credit-card"}]:[]),
   ];
@@ -3732,6 +3778,12 @@ function Settings() {
   function addOrderDay(){saveOrderDays([...orderDays,{order:"lunes",deliver:"martes"}]);}
   function updOrderDay(idx,k,v){saveOrderDays(orderDays.map((d,i)=>i===idx?{...d,[k]:v}:d));}
   function rmOrderDay(idx){saveOrderDays(orderDays.filter((_,i)=>i!==idx));}
+  async function saveInventoryDate(val){
+    setInventoryDate(val);
+    const rid = currentUser?.restaurant_id;
+    const { error } = await supabase.from("app_settings").update({ inventory_date: val||null }).eq("restaurant_id", rid);
+    if (error) console.error("Error guardando fecha de inventario:", error.message);
+  }
   const MODS=[{id:"dashboard",icon:"ti-layout-dashboard",label:"Dashboard"},{id:"ingredients",icon:"ti-basket",label:t("totalIngredients",lang)},{id:"recipes",icon:"ti-book",label:t("tabIngredients",lang)==="Ingredients"?"Recipes":"Recetas"},{id:"invoices",icon:"ti-receipt",label:lang==="en"?"Invoices":"Facturas"},{id:"inventory",icon:"ti-box",label:lang==="en"?"Inventory":"Inventario"},{id:"wastelog",icon:"ti-trash",label:"Waste Log"}];
   return (
     <div style={{padding:24,display:"flex",flexDirection:"column",gap:16,maxWidth:680}}>
@@ -3857,6 +3909,24 @@ function Settings() {
             </div>
           </div>
         </div>
+      </div>}
+
+      {tab==="inventory"&&<div style={{...g.card,padding:20,display:"flex",flexDirection:"column",gap:16}}>
+        <div style={{fontSize:14,fontWeight:700}}>{lang==="en"?"Scheduled inventory date":"Fecha programada de inventario"}</div>
+        <div style={{fontSize:12,color:TEXT2}}>{lang==="en"?"Set a date for your monthly (or periodic) inventory count. A countdown banner will appear on the Dashboard.":"Programa la fecha de tu conteo de inventario mensual o periódico. Aparecerá un banner en el Dashboard con la cuenta regresiva."}</div>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          <label style={g.lbl}>{lang==="en"?"Inventory date":"Fecha de inventario"}</label>
+          <input type="date" style={{...g.inp,maxWidth:220}} value={inventoryDate} onChange={e=>saveInventoryDate(e.target.value)}/>
+        </div>
+        {inventoryDate&&(()=>{
+          const today=new Date();today.setHours(0,0,0,0);
+          const target=new Date(inventoryDate+"T00:00:00");
+          const days=Math.round((target-today)/86400000);
+          if(days<0) return <div style={{fontSize:12,color:"#E24B4A",background:"rgba(226,75,74,0.07)",borderRadius:8,padding:"8px 12px"}}><i className="ti ti-alert-circle" style={{marginRight:6}}/>{lang==="en"?"This date has passed. Update it for the next inventory.":"Esta fecha ya pasó. Actualízala para el próximo inventario."}</div>;
+          const isToday=days===0;
+          return <div style={{fontSize:12,color:isToday?"#C8312B":days<=3?"#EF9F27":"#378ADD",background:isToday?"rgba(200,49,43,0.07)":days<=3?"rgba(239,159,39,0.07)":"rgba(55,138,221,0.07)",borderRadius:8,padding:"8px 12px"}}><i className="ti ti-calendar-check" style={{marginRight:6}}/>{isToday?(lang==="en"?"Today is inventory day! Go count 🎯":"¡Hoy es el día del inventario! Ve a contar 🎯"):(lang==="en"?`${days} day${days===1?"":"s"} until inventory`:`Faltan ${days} día${days===1?"":"s"} para el inventario`)}</div>;
+        })()}
+        {inventoryDate&&<button style={{...g.btnS,width:"fit-content",fontSize:12}} onClick={()=>saveInventoryDate("")}><i className="ti ti-x"/>{lang==="en"?"Clear date":"Eliminar fecha"}</button>}
       </div>}
 
       {tab==="users"&&currentUser.role==="admin"&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -4328,6 +4398,7 @@ export default function App() {
   const [shoppingSubmittedBy, setShoppingSubmittedBy] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
   const [plan, setPlan] = useState("trial"); // "trial" | "starter" | "pro"
+  const [inventoryDate, setInventoryDate] = useState(""); // YYYY-MM-DD
   const [page,        setPage]        = useState("dashboard");
   const [dbLoading,   setDbLoading]   = useState(true);
   const [dbError,     setDbError]     = useState(null);
@@ -4370,6 +4441,7 @@ export default function App() {
           setOrderDays(setRes.data.order_days || []);
           if (setRes.data.currency) setCurrency(setRes.data.currency);
           if (setRes.data.unit_system) setUnitSystem(setRes.data.unit_system);
+          if (setRes.data.inventory_date) setInventoryDate(setRes.data.inventory_date);
         }
         if (!shopRes.error && shopRes.data) {
           setPendingShopping(shopRes.data.length);
@@ -4403,7 +4475,7 @@ export default function App() {
   const canAccess = (id) => !currentUser ? false : currentUser.role==="admin" ? true : !!currentUser.permissions[id];
   const canEdit   = (id) => !currentUser ? false : currentUser.role==="admin" ? true : currentUser.permissions[id]==="edit";
 
-  const ctx = { currentUser, setUser, users, setUsers, ingredients, setIngredients, recipes, setRecipes, invoices, setInvoices, lang, setLang, currency, setCurrency, unitSystem, setUnitSystem, mainSupplier, setMainSupplier, orderDays, setOrderDays, pendingShopping, setPendingShopping, setPage, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, restaurantName, plan, setPlan };
+  const ctx = { currentUser, setUser, users, setUsers, ingredients, setIngredients, recipes, setRecipes, invoices, setInvoices, lang, setLang, currency, setCurrency, unitSystem, setUnitSystem, mainSupplier, setMainSupplier, orderDays, setOrderDays, pendingShopping, setPendingShopping, setPage, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, restaurantName, plan, setPlan, inventoryDate, setInventoryDate };
 
   const PAGES = { dashboard:<Dashboard/>, ingredients:<Ingredients/>, recipes:<Recipes/>, invoices:<Invoices/>, inventory:<Inventory/>, wastelog:<WasteLog/>, shopping:<ShoppingList/>, settings:<Settings/> };
   const visibleNav = [...NAV.filter(n=>canAccess(n.id)), { id:"settings", icon:"ti-settings", es:"Configuración", en:"Settings" }];
