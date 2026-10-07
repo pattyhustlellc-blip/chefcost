@@ -1683,7 +1683,51 @@ function exportRecipes(recipes, ingredients, lang) {
   exportExcel(rows, lang==="en"?"Recipes":"Recetas", `ChefCost_Recipes_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
-function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$") {
+function askAndPrintRecipe(recipe, ingredients, lang, allRecipes=[], currency="$") {
+  // Remove any existing modal
+  const existing = document.getElementById("__recipe_print_modal");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "__recipe_print_modal";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);";
+
+  const isEs = lang !== "en";
+  const box = document.createElement("div");
+  box.style.cssText = "background:#fff;border-radius:18px;padding:28px 28px 24px;max-width:360px;width:100%;font-family:'Inter',system-ui,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,0.25);";
+  box.innerHTML = `
+    <div style="font-size:15px;font-weight:800;color:#1c1c1e;margin-bottom:6px;">${isEs?"Descargar ficha":"Download recipe card"}</div>
+    <div style="font-size:12.5px;color:#8e8e93;margin-bottom:22px;line-height:1.5;">${isEs?"¿Quieres incluir el resumen de costos en la ficha?":"Do you want to include the cost summary?"}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <button id="__rpm_with" style="background:#1c1c1e;color:#fff;border:none;border-radius:10px;padding:13px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:9px;font-family:inherit;">
+        <span style="font-size:16px;">📊</span>
+        <div style="text-align:left;">
+          <div>${isEs?"Con costos":"With costs"}</div>
+          <div style="font-size:10.5px;font-weight:400;opacity:0.5;">${isEs?"Incluye precios, food cost y margen":"Includes pricing, food cost & margin"}</div>
+        </div>
+      </button>
+      <button id="__rpm_without" style="background:#f5f5f7;color:#1c1c1e;border:none;border-radius:10px;padding:13px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:9px;font-family:inherit;">
+        <span style="font-size:16px;">📋</span>
+        <div style="text-align:left;">
+          <div>${isEs?"Sin costos":"Without costs"}</div>
+          <div style="font-size:10.5px;font-weight:400;color:#8e8e93;">${isEs?"Solo ingredientes y preparación":"Ingredients & preparation only"}</div>
+        </div>
+      </button>
+      <button id="__rpm_cancel" style="background:none;border:none;color:#8e8e93;font-size:12px;cursor:pointer;padding:6px;font-family:inherit;font-weight:500;">${isEs?"Cancelar":"Cancel"}</button>
+    </div>
+  `;
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById("__rpm_cancel").onclick = () => overlay.remove();
+  document.getElementById("__rpm_with").onclick = () => { overlay.remove(); printRecipe(recipe, ingredients, lang, allRecipes, currency, true); };
+  document.getElementById("__rpm_without").onclick = () => { overlay.remove(); printRecipe(recipe, ingredients, lang, allRecipes, currency, false); };
+}
+
+function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$", showCosts=true) {
   const recName = (lang==="en" && recipe.name_en) ? recipe.name_en : recipe.name;
   const T = lang==="en" ? {
     subtitle:"CHEFCOST · RECIPE CARD", portions:"Portions", portionSize:"Portion size", prep:"Prep",
@@ -1774,7 +1818,7 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$") {
       <div class="info-cell"><div class="info-label">${T.prep}</div><div class="info-value">${recipe.prep_time || "—"}</div></div>
       <div class="info-cell"><div class="info-label">${T.cook}</div><div class="info-value">${recipe.cook_time || "—"}</div></div>
       <div class="info-cell"><div class="info-label">${T.shelf}</div><div class="info-value">${recipe.shelf_life || "—"}</div></div>
-      <div class="info-cell"><div class="info-label">${T.costPer}</div><div class="info-value" style="color:#C8312B">${cpp > 0 ? `${currency}${cpp.toFixed(2)}` : "—"}</div></div>
+      ${showCosts ? `<div class="info-cell"><div class="info-label">${T.costPer}</div><div class="info-value" style="color:#C8312B">${cpp > 0 ? `${currency}${cpp.toFixed(2)}` : "—"}</div></div>` : ""}
     </div>
 
     <div class="section-title">${T.allergens}</div>
@@ -1788,6 +1832,7 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$") {
       ${stepsHtml || `<p class='empty-note'>${T.noSteps}</p>`}
     </div>
 
+    ${showCosts ? `
     <div class="section-title">${T.costTitle}</div>
     <div class="cost-grid">
       <div class="cost-cell primary">
@@ -1820,7 +1865,7 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$") {
         <div class="cost-value">${recipe.target_margin ? `${recipe.target_margin}%` : "70%"}</div>
         <div class="cost-sub">${lang==="en"?"target":"objetivo"}</div>
       </div>
-    </div>
+    </div>` : ""}
 
     <div class="cc-footer">
       <div class="cc-footer-brand">CHEFCOST</div>
@@ -2276,7 +2321,7 @@ function Recipes() {
                       </td>
                       <td style={g.td}>
                         <div style={{display:"flex",gap:5}}>
-                          <button style={g.btnI} onClick={()=>printRecipe(r,ingredients,lang,recipes,currency)}><i className="ti ti-file-download" style={{fontSize:12}}/>PDF</button>
+                          <button style={g.btnI} onClick={()=>askAndPrintRecipe(r,ingredients,lang,recipes,currency)}><i className="ti ti-file-download" style={{fontSize:12}}/>PDF</button>
                           <button style={g.btnI} onClick={()=>setEd(r)}><i className="ti ti-pencil" style={{fontSize:12}}/>{t("edit",lang)}</button>
                           <button style={g.btnD} onClick={()=>removeRecipe(r.id)}><i className="ti ti-trash" style={{fontSize:12}}/>{t("delete",lang)}</button>
                         </div>
@@ -2595,7 +2640,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
 
         <div style={{display:"flex",gap:10}}>
           <button style={{...g.btnP,flex:1,justifyContent:"center"}} onClick={()=>onSave({...r,selling_price:cm==="margin"&&sug?sug.toFixed(2):r.selling_price})}><i className="ti ti-check"/>{t("saveRecipe",lang)}</button>
-          {!isNew&&<button style={g.btnI} onClick={()=>printRecipe(r,ingredients,lang,allRecipes,currency)}><i className="ti ti-file-download"/>{t("downloadPdf",lang)}</button>}
+          {!isNew&&<button style={g.btnI} onClick={()=>askAndPrintRecipe(r,ingredients,lang,allRecipes,currency)}><i className="ti ti-file-download"/>{t("downloadPdf",lang)}</button>}
           <button style={g.btnS} onClick={onClose}>{t("cancel",lang)}</button>
         </div>
       </div>
