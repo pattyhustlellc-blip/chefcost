@@ -3636,6 +3636,218 @@ function WasteLog() {
 }
 
 function ShoppingList() {
+  const { ingredients, lang, currency, unitSystem, currentUser } = useApp();
+  const showToast = useToast();
+  const rid = currentUser?.restaurant_id;
+
+  // Par levels persisted in localStorage keyed by restaurant
+  const PAR_KEY = `chefcost_par_${rid}`;
+  const loadPar = () => { try { return JSON.parse(localStorage.getItem(PAR_KEY)||"{}"); } catch(e){return{};} };
+  const savePar = (obj) => { try { localStorage.setItem(PAR_KEY, JSON.stringify(obj)); } catch(e){} };
+
+  const [pars, setPars]       = useState(loadPar);   // { [ing.id]: number }
+  const [onHand, setOnHand]   = useState({});         // { [ing.id]: number } — session only
+  const [search, setSearch]   = useState("");
+  const [fSup, setFSup]       = useState("all");
+  const [showOrderOnly, setShowOrderOnly] = useState(false);
+
+  const suppliers = ["all", ...[...new Set(ingredients.map(i=>i.supplier).filter(Boolean))].sort()];
+
+  // Filtered ingredient list
+  const filtered = ingredients.filter(i => {
+    const matchSearch = !search || i.name.toLowerCase().includes(search.toLowerCase());
+    const matchSup    = fSup==="all" || i.supplier===fSup;
+    const matchOrder  = !showOrderOnly || needsOrder(i.id);
+    return matchSearch && matchSup && matchOrder;
+  });
+
+  function needsOrder(id) {
+    const par = parseFloat(pars[id])||0;
+    const oh  = parseFloat(onHand[id])||0;
+    return par > 0 && oh < par;
+  }
+
+  function setPar(id, val) {
+    setPars(prev => {
+      const next = {...prev, [id]: val};
+      savePar(next);
+      return next;
+    });
+  }
+
+  function setOH(id, val) {
+    setOnHand(prev => ({...prev, [id]: val}));
+  }
+
+  // Order list: ingredients where on_hand < par
+  const orderList = ingredients.filter(i => needsOrder(i.id));
+  const bySupplier = {};
+  orderList.forEach(i => {
+    const sup = i.supplier || (lang==="en"?"Other":"Otro");
+    if (!bySupplier[sup]) bySupplier[sup] = [];
+    bySupplier[sup].push(i);
+  });
+
+  function copyOrderList() {
+    const date = new Date().toLocaleDateString(lang==="en"?"en-US":"es-US",{day:"numeric",month:"long",year:"numeric"});
+    const header = lang==="en" ? `🛒 Order Guide — ${date}` : `🛒 Guía de pedidos — ${date}`;
+    const lines = [header, ""];
+    Object.entries(bySupplier).forEach(([sup, its]) => {
+      lines.push(`📦 ${sup}`);
+      its.forEach(i => {
+        const par   = parseFloat(pars[i.id])||0;
+        const oh    = parseFloat(onHand[i.id])||0;
+        const need  = Math.max(0, par - oh);
+        lines.push(`  • ${i.name} — ${need} ${i.unit_purchase} (par: ${par}, en mano: ${oh})`);
+      });
+      lines.push("");
+    });
+    navigator.clipboard.writeText(lines.join("\n")).then(()=>{
+      showToast(lang==="en"?"✓ Order list copied":"✓ Lista copiada");
+    });
+  }
+
+  function sendWhatsApp() {
+    const date = new Date().toLocaleDateString(lang==="en"?"en-US":"es-US",{day:"numeric",month:"long"});
+    const header = lang==="en" ? `🛒 *Order Guide — ${date}*` : `🛒 *Guía de pedidos — ${date}*`;
+    const lines = [header, ""];
+    Object.entries(bySupplier).forEach(([sup, its]) => {
+      lines.push(`📦 *${sup}*`);
+      its.forEach(i => {
+        const par  = parseFloat(pars[i.id])||0;
+        const oh   = parseFloat(onHand[i.id])||0;
+        const need = Math.max(0, par - oh);
+        lines.push(`  • ${i.name} — ${need} ${i.unit_purchase}`);
+      });
+      lines.push("");
+    });
+    window.open(`https://wa.me/?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
+  }
+
+  const needCount = orderList.length;
+
+  return (
+    <div style={{padding:20, display:"flex", flexDirection:"column", gap:14}}>
+
+      {/* Order list summary banner */}
+      {needCount > 0 && (
+        <div style={{background:"rgba(200,49,43,0.05)", border:`1px solid rgba(200,49,43,0.2)`, borderRadius:10, padding:"12px 16px", display:"flex", alignItems:"center", gap:12}}>
+          <i className="ti ti-shopping-cart" style={{fontSize:20, color:ACCENT, flexShrink:0}}/>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13, fontWeight:700, color:ACCENT}}>
+              {needCount} {lang==="en" ? `item${needCount!==1?"s":""} to order` : `ingrediente${needCount!==1?"s":""} por pedir`}
+            </div>
+            <div style={{fontSize:11, color:TEXT2, marginTop:2}}>
+              {Object.keys(bySupplier).join(" · ")}
+            </div>
+          </div>
+          <div style={{display:"flex", gap:6}}>
+            <button style={g.btnS} onClick={copyOrderList} title={lang==="en"?"Copy":"Copiar"}>
+              <i className="ti ti-copy" style={{fontSize:13}}/>{lang==="en"?"Copy":"Copiar"}
+            </button>
+            <button style={{...g.btnP, background:"#25D366"}} onClick={sendWhatsApp}>
+              <i className="ti ti-brand-whatsapp" style={{fontSize:13}}/>WhatsApp
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div style={{display:"flex", gap:8, flexWrap:"wrap", alignItems:"center"}}>
+        <input style={{...g.inp, flex:1, minWidth:160}} placeholder={lang==="en"?"Search ingredient...":"Buscar ingrediente..."} value={search} onChange={e=>setSearch(e.target.value)}/>
+        <select style={{...g.sel, width:160}} value={fSup} onChange={e=>setFSup(e.target.value)}>
+          {suppliers.map(s=><option key={s} value={s}>{s==="all"?(lang==="en"?"All suppliers":"Todos los proveedores"):s}</option>)}
+        </select>
+        <button style={{...g.btnS, background:showOrderOnly?"rgba(200,49,43,0.08)":"transparent", border:`1px solid ${showOrderOnly?ACCENT:BDR}`, color:showOrderOnly?ACCENT:TEXT2}} onClick={()=>setShowOrderOnly(v=>!v)}>
+          <i className="ti ti-filter" style={{fontSize:13}}/>
+          {lang==="en"?"Need to order":"Por pedir"}{showOrderOnly && ` (${needCount})`}
+        </button>
+      </div>
+
+      {/* Column headers */}
+      <div style={{display:"grid", gridTemplateColumns:"1fr 90px 90px 90px", gap:8, padding:"4px 12px", fontSize:10, fontWeight:700, color:TEXT2, textTransform:"uppercase", letterSpacing:"0.05em"}}>
+        <span>{lang==="en"?"Ingredient / Supplier":"Ingrediente / Proveedor"}</span>
+        <span style={{textAlign:"center"}}>{lang==="en"?"Par":"Par"}</span>
+        <span style={{textAlign:"center"}}>{lang==="en"?"On hand":"En mano"}</span>
+        <span style={{textAlign:"center"}}>{lang==="en"?"To order":"Pedir"}</span>
+      </div>
+
+      {/* Ingredient rows */}
+      {filtered.length === 0 && (
+        <div style={{...g.card, padding:40, textAlign:"center", color:TEXT2}}>
+          <i className="ti ti-clipboard-list" style={{fontSize:40, display:"block", marginBottom:10}}/>
+          <div style={{fontSize:13, fontWeight:600}}>{lang==="en"?"No ingredients found":"Sin ingredientes"}</div>
+          <div style={{fontSize:11, marginTop:4}}>{lang==="en"?"Add ingredients in the Ingredients section first":"Agrega ingredientes en la sección de Ingredientes primero"}</div>
+        </div>
+      )}
+
+      {/* Group by supplier */}
+      {[...new Set(filtered.map(i=>i.supplier||"—"))].sort().map(sup => {
+        const supIngs = filtered.filter(i=>(i.supplier||"—")===sup);
+        return (
+          <div key={sup} style={g.card}>
+            <div style={{padding:"8px 14px", borderBottom:`1px solid ${BDR}`, background:SURF2, display:"flex", alignItems:"center", gap:8}}>
+              <i className="ti ti-building-store" style={{fontSize:13, color:ACCENT}}/>
+              <span style={{fontSize:12, fontWeight:700, color:ACCENT}}>{sup==="—"?(lang==="en"?"No supplier":"Sin proveedor"):sup}</span>
+              {supIngs.filter(i=>needsOrder(i.id)).length > 0 && (
+                <span style={{marginLeft:"auto", fontSize:10, background:"rgba(200,49,43,0.1)", color:ACCENT, fontWeight:700, padding:"2px 8px", borderRadius:99}}>
+                  {supIngs.filter(i=>needsOrder(i.id)).length} {lang==="en"?"to order":"por pedir"}
+                </span>
+              )}
+            </div>
+            <div style={{display:"flex", flexDirection:"column"}}>
+              {supIngs.map((ing, idx) => {
+                const par  = parseFloat(pars[ing.id])||0;
+                const oh   = parseFloat(onHand[ing.id])||0;
+                const need = par > 0 ? Math.max(0, par - oh) : 0;
+                const isLow = needsOrder(ing.id);
+                return (
+                  <div key={ing.id} style={{display:"grid", gridTemplateColumns:"1fr 90px 90px 90px", gap:8, alignItems:"center", padding:"10px 14px", borderBottom:idx<supIngs.length-1?`1px solid ${BDR}`:"none", background:isLow?"rgba(200,49,43,0.03)":"transparent"}}>
+                    {/* Name */}
+                    <div>
+                      <div style={{fontSize:13, fontWeight:500, color:isLow?ACCENT:TEXT}}>{ing.name}</div>
+                      <div style={{fontSize:10, color:TEXT2}}>{ing.unit_purchase}</div>
+                    </div>
+                    {/* Par */}
+                    <input
+                      type="text" inputMode="decimal"
+                      style={{...g.inp, textAlign:"center", fontSize:13, padding:"5px 8px"}}
+                      placeholder="—"
+                      value={pars[ing.id]||""}
+                      onChange={e=>setPar(ing.id, e.target.value)}
+                    />
+                    {/* On hand */}
+                    <input
+                      type="text" inputMode="decimal"
+                      style={{...g.inp, textAlign:"center", fontSize:13, padding:"5px 8px", border:isLow?`1.5px solid ${ACCENT}`:undefined}}
+                      placeholder="0"
+                      value={onHand[ing.id]||""}
+                      onChange={e=>setOH(ing.id, e.target.value)}
+                    />
+                    {/* To order */}
+                    <div style={{textAlign:"center", fontWeight:700, fontSize:13, color: need>0 ? ACCENT : FC_OK}}>
+                      {par > 0 ? (need > 0 ? need : <i className="ti ti-check" style={{color:FC_OK}}/>) : <span style={{color:TEXT2, fontSize:11}}>—</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {filtered.length > 0 && (
+        <div style={{fontSize:10, color:TEXT2, textAlign:"center", paddingTop:4}}>
+          {lang==="en"
+            ? "Par levels are saved automatically. On-hand counts reset when you reload."
+            : "Los niveles de par se guardan automáticamente. El conteo de mano se reinicia al recargar."}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ShoppingListOLD() {
   const { ingredients, lang, currency, unitSystem, setPendingShopping, shoppingSubmitted, setShoppingSubmitted, shoppingSubmittedBy, setShoppingSubmittedBy, currentUser } = useApp();
   const showToast = useToast();
   const _sdu = defaultUnits(unitSystem);
