@@ -3765,11 +3765,11 @@ function ShoppingList() {
       </div>
 
       {/* Column headers */}
-      <div style={{display:"grid", gridTemplateColumns:"1fr 90px 90px 90px", gap:8, padding:"4px 12px", fontSize:10, fontWeight:700, color:TEXT2, textTransform:"uppercase", letterSpacing:"0.05em"}}>
-        <span>{lang==="en"?"Ingredient / Supplier":"Ingrediente / Proveedor"}</span>
-        <span style={{textAlign:"center"}}>{lang==="en"?"Par":"Par"}</span>
-        <span style={{textAlign:"center"}}>{lang==="en"?"On hand":"En mano"}</span>
-        <span style={{textAlign:"center"}}>{lang==="en"?"To order":"Pedir"}</span>
+      <div style={{display:"grid", gridTemplateColumns:"1fr 90px 90px 90px", gap:8, padding:"4px 12px", fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.05em"}}>
+        <span style={{color:TEXT2}}>{lang==="en"?"Ingredient / Supplier":"Ingrediente / Proveedor"}</span>
+        <span style={{textAlign:"center", color:"#16a34a"}}>{lang==="en"?"Par":"Par"}</span>
+        <span style={{textAlign:"center", color:"#C8312B"}}>{lang==="en"?"On hand":"En mano"}</span>
+        <span style={{textAlign:"center", color:TEXT2}}>{lang==="en"?"To order":"Pedir"}</span>
       </div>
 
       {/* Ingredient rows */}
@@ -3811,7 +3811,7 @@ function ShoppingList() {
                     {/* Par */}
                     <input
                       type="text" inputMode="decimal"
-                      style={{...g.inp, textAlign:"center", fontSize:13, padding:"5px 8px"}}
+                      style={{...g.inp, textAlign:"center", fontSize:13, padding:"5px 8px", borderBottom:"2px solid #16a34a", color:"#16a34a", fontWeight:600}}
                       placeholder="—"
                       value={pars[ing.id]||""}
                       onChange={e=>setPar(ing.id, e.target.value)}
@@ -3819,7 +3819,7 @@ function ShoppingList() {
                     {/* On hand */}
                     <input
                       type="text" inputMode="decimal"
-                      style={{...g.inp, textAlign:"center", fontSize:13, padding:"5px 8px", border:isLow?`1.5px solid ${ACCENT}`:undefined}}
+                      style={{...g.inp, textAlign:"center", fontSize:13, padding:"5px 8px", borderBottom:`2px solid ${ACCENT}`, color:ACCENT, fontWeight:600}}
                       placeholder="0"
                       value={onHand[ing.id]||""}
                       onChange={e=>setOH(ing.id, e.target.value)}
