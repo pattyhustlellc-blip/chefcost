@@ -1569,9 +1569,15 @@ function IngModal({ item, onSave, onClose, isNew, lang }) {
   const sf = (k,v) => setF(x=>({...x,[k]:v}));
   const cpu = f.pack_size && parseFloat(f.pack_size)>0 && f.price
     ? (parseFloat(f.price)/parseFloat(f.pack_size)).toFixed(3) : null;
-  // Warn when unit_purchase ≠ unit_use, units are not auto-convertible, and pack_size is missing
-  const needsPackSize = f.unit_purchase && f.unit_use && f.unit_purchase !== f.unit_use
-    && !UNIT_TO_BASE[f.unit_purchase] && !f.pack_size;
+  // Warn when unit_purchase ≠ unit_use, units can't be auto-converted (different categories or not in table), and pack_size is missing
+  const purchaseIsWeight = WEIGHT_UNITS.has(f.unit_purchase);
+  const purchaseIsVolume = VOLUME_UNITS.has(f.unit_purchase);
+  const useIsWeight      = WEIGHT_UNITS.has(f.unit_use);
+  const useIsVolume      = VOLUME_UNITS.has(f.unit_use);
+  const crossCategory    = (purchaseIsWeight && useIsVolume) || (purchaseIsVolume && useIsWeight);
+  const noAutoConvert    = !UNIT_TO_BASE[f.unit_purchase] || !UNIT_TO_BASE[f.unit_use] || crossCategory;
+  const needsPackSize    = f.unit_purchase && f.unit_use && f.unit_purchase !== f.unit_use
+    && noAutoConvert && !f.pack_size;
   return (
     <div style={g.modal}>
       <div style={g.mbox} onClick={e=>e.stopPropagation()}>
@@ -1601,11 +1607,15 @@ function IngModal({ item, onSave, onClose, isNew, lang }) {
         <div style={{display:"flex",gap:10}}>
           <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}><label style={g.lbl}>{t("unitsPerPack",lang)}</label><input style={g.inp} type="text" inputMode="decimal" placeholder={lang==="en"?"e.g: 169 fl oz":"ej: 169 fl oz"} value={f.pack_size||""} onChange={e=>sf("pack_size",e.target.value)}/></div>
         </div>
-        {needsPackSize && <div style={{fontSize:11,color:FC_WARN,background:WARN_BG,border:`1px solid ${WARN_BDR}`,padding:"8px 12px",borderRadius:8}}>
+        {needsPackSize && <div style={{fontSize:11,color:FC_WARN,background:WARN_BG,border:`1px solid ${WARN_BDR}`,padding:"8px 12px",borderRadius:8,lineHeight:1.5}}>
           <i className="ti ti-alert-triangle" style={{marginRight:6}}/>
-          {lang==="en"
-            ? `"${f.unit_purchase}" and "${f.unit_use}" can't be auto-converted. Enter the package contents above (e.g. 1 bag = 30 ct) so the cost per unit is correct.`
-            : `"${f.unit_purchase}" y "${f.unit_use}" no se pueden convertir automáticamente. Ingresa el contenido del empaque arriba (ej: 1 bolsa = 30 ct) para que el costo por unidad sea correcto.`}
+          {crossCategory
+            ? (lang==="en"
+                ? `"${f.unit_purchase}" is a ${purchaseIsVolume?"volume":"weight"} unit but "${f.unit_use}" is a ${useIsWeight?"weight":"volume"} unit — they can't be auto-converted. Enter the package contents above (e.g. 1 gal = 8 lb) so the cost per ${f.unit_use} is correct.`
+                : `"${f.unit_purchase}" es una unidad de ${purchaseIsVolume?"volumen":"peso"} y "${f.unit_use}" es de ${useIsWeight?"peso":"volumen"} — no se convierten automáticamente. Ingresa el contenido del empaque arriba (ej: 1 gal = 8 lb) para que el costo por ${f.unit_use} sea correcto.`)
+            : (lang==="en"
+                ? `"${f.unit_purchase}" and "${f.unit_use}" can't be auto-converted. Enter the package contents above (e.g. 1 bag = 30 ct) so the cost per unit is correct.`
+                : `"${f.unit_purchase}" y "${f.unit_use}" no se pueden convertir automáticamente. Ingresa el contenido del empaque arriba (ej: 1 bolsa = 30 ct) para que el costo por unidad sea correcto.`)}
         </div>}
         {cpu && <div style={{fontSize:11,color:ACCENT,background:"rgba(200,49,43,0.05)",padding:"8px 12px",borderRadius:8}}><i className="ti ti-calculator" style={{marginRight:6}}/>{t("costPerUnit",lang)}: <strong>{currency}{cpu}/{f.unit_use}</strong></div>}
         <div style={{display:"flex",gap:10}}>
