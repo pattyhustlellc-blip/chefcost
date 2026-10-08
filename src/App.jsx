@@ -2531,6 +2531,7 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
           const recipeUnit = ri.unit && ri.unit.trim() ? ri.unit : (ing?.unit_use || "");
           const recipeQtyNum = parseFloat(ri.qty)||0;
           let lc = 0;
+          let unitMismatchWarn = false;
           if (ing) {
             const ingUnitUse = ing.unit_use;
             const recipeUnitBase = UNIT_TO_BASE[recipeUnit] || 0;
@@ -2541,12 +2542,29 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
               const qtyInIngUnit = qtyInBase / ingUnitBase;
               lc = qtyInIngUnit * cpbu;
             } else {
+              // Cross-category or incompatible: detect mismatch
+              const recipeIsWeight = WEIGHT_UNITS.has(recipeUnit);
+              const recipeIsVolume = VOLUME_UNITS.has(recipeUnit);
+              const ingIsWeight    = WEIGHT_UNITS.has(ingUnitUse);
+              const ingIsVolume    = VOLUME_UNITS.has(ingUnitUse);
+              if ((recipeIsWeight && ingIsVolume) || (recipeIsVolume && ingIsWeight)) {
+                unitMismatchWarn = true;
+              }
               const converted = convertUnits(recipeQtyNum, recipeUnit, ingUnitUse);
               lc = converted * cpbu;
             }
           }
           return (
-            <div key={ri.id||idx} style={{display:"flex",gap:8,alignItems:"flex-end",background:SURF2,borderRadius:8,padding:"8px 10px"}}>
+            <div key={ri.id||idx} style={{display:"flex",flexDirection:"column",gap:4}}>
+            {unitMismatchWarn && ing && (
+              <div style={{fontSize:10,color:FC_WARN,background:WARN_BG,border:`1px solid ${WARN_BDR}`,padding:"5px 10px",borderRadius:6,display:"flex",gap:6,alignItems:"center"}}>
+                <i className="ti ti-alert-triangle" style={{flexShrink:0}}/>
+                {lang==="en"
+                  ? `Unit mismatch: recipe uses "${recipeUnit}" (${WEIGHT_UNITS.has(recipeUnit)?"weight":"volume"}) but ingredient is measured in "${ing.unit_use}" (${WEIGHT_UNITS.has(ing.unit_use)?"weight":"volume"}). Cost may be incorrect — edit the ingredient and set its "Package contents" (e.g. 1 ${ing.unit_use} = X ${recipeUnit}).`
+                  : `Unidades incompatibles: la receta usa "${recipeUnit}" (${WEIGHT_UNITS.has(recipeUnit)?"peso":"volumen"}) pero el ingrediente está en "${ing.unit_use}" (${WEIGHT_UNITS.has(ing.unit_use)?"peso":"volumen"}). El costo puede ser incorrecto — edita el ingrediente y configura su "Contenido del empaque" (ej: 1 ${ing.unit_use} = X ${recipeUnit}).`}
+              </div>
+            )}
+            <div style={{display:"flex",gap:8,alignItems:"flex-end",background:unitMismatchWarn?WARN_BG:SURF2,border:unitMismatchWarn?`1px solid ${WARN_BDR}`:"none",borderRadius:8,padding:"8px 10px"}}>
               <div style={{flex:2,display:"flex",flexDirection:"column",gap:4}}><label style={{...g.lbl,fontSize:9}}>{t("tabIngredients",lang).slice(0,-1)}</label>
                 <select style={{...g.sel,width:"100%"}} value={ri.ing_id} onChange={e=>{
                   const newId = parseInt(e.target.value);
@@ -2562,8 +2580,9 @@ function RecipeModal({recipe:init,isNew,onSave,onClose,ingredients,cats,onAddCat
               <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}><label style={{...g.lbl,fontSize:9}}>{t("unit",lang)}</label>
                 <select style={{...g.sel,width:"100%"}} value={ri.unit} onChange={e=>upI(idx,"unit",e.target.value)}>{getUnits(lang).map(u=><option key={u}>{u}</option>)}</select>
               </div>
-              <div style={{fontSize:11,color:lc>0?ACCENT:TEXT2,fontWeight:600,paddingBottom:6,minWidth:50,textAlign:"right"}}>{currency}{lc.toFixed(3)}</div>
+              <div style={{fontSize:11,color:lc>0?(unitMismatchWarn?FC_WARN:ACCENT):TEXT2,fontWeight:600,paddingBottom:6,minWidth:50,textAlign:"right"}}>{unitMismatchWarn&&<i className="ti ti-alert-triangle" style={{marginRight:3}}/>}{currency}{lc.toFixed(3)}</div>
               <button style={{...g.btnD,marginBottom:1}} onClick={()=>rmI(idx)}><i className="ti ti-trash"/></button>
+            </div>
             </div>
           );
         })}
