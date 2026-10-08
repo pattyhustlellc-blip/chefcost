@@ -2161,17 +2161,19 @@ function Recipes() {
   async function save(u) {
     const rid = currentUser?.restaurant_id;
     const isExisting = recipes.some(r=>r.id===u.id);
+    const numOrNull = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
     const clean = {
       ...u,
       restaurant_id: rid,
-      portions: parseFloat(u.portions)||1,
-      portion_size: u.portion_size?parseFloat(u.portion_size):null,
-      waste_pct: parseFloat(u.waste_pct)||0,
-      selling_price: u.selling_price?parseFloat(u.selling_price):null,
-      target_margin: u.target_margin?parseFloat(u.target_margin):null,
-      ingredients: u.ingredients||[],
-      steps: u.steps||[],
-      allergens: u.allergens||[],
+      portions:      parseFloat(u.portions)||1,
+      portion_size:  numOrNull(u.portion_size),
+      waste_pct:     parseFloat(u.waste_pct)||0,
+      selling_price: numOrNull(u.selling_price),
+      target_margin: numOrNull(u.target_margin),
+      total_yield:   numOrNull(u.total_yield),
+      ingredients:   u.ingredients||[],
+      steps:         u.steps||[],
+      allergens:     u.allergens||[],
     };
     if (isExisting) {
       const { id, ...updateFields } = clean;
