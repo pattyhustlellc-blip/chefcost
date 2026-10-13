@@ -1764,8 +1764,15 @@ function printRecipe(recipe, ingredients, lang, allRecipes=[], currency="$", sho
   const ingQtyHeader = lang==="en" ? "Qty / Unit" : "Cant. / Unidad";
   const ingNameHeader = lang==="en" ? "Ingredient" : "Ingrediente";
   const ingRows = recipe.ingredients.map(ri => {
-    const i = ingredients.find(x => x.id === ri.ing_id);
-    return `<tr><td class="ing-qty-cell">${ri.qty} ${ri.unit}</td><td class="ing-name-cell">${i ? i.name : (lang==="en"?"Ingredient":"Ingrediente")}</td></tr>`;
+    let displayName;
+    if (ri.type === "prep" && ri.prep_id) {
+      const prepRec = allRecipes.find(r => r.id === ri.prep_id);
+      displayName = prepRec ? ((lang==="en" && prepRec.name_en) ? prepRec.name_en : prepRec.name) : (lang==="en"?"Prep recipe":"Prep recipe");
+    } else {
+      const i = ingredients.find(x => x.id === ri.ing_id);
+      displayName = i ? i.name : (lang==="en"?"Ingredient":"Ingrediente");
+    }
+    return `<tr><td class="ing-qty-cell">${ri.qty} ${ri.unit}</td><td class="ing-name-cell">${displayName}</td></tr>`;
   }).join("");
   const ingTableHtml = recipe.ingredients.length > 0
     ? `<table class="ing-table"><thead><tr><th>${ingQtyHeader}</th><th>${ingNameHeader}</th></tr></thead><tbody>${ingRows}</tbody></table>`
